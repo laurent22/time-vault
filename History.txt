@@ -1,0 +1,35 @@
+This is a free time tracker widget. Click on the play button when you start a task and click it once again when you have finished.
+
+The tasks are grouped by projects and can be viewed by clicking on the arrow button. You can also edit or delete a task by right-clicking on it.
+
+The Widget will automatically publish and maintain Excel-compatible files containing the list of your tasks. You can customize these files by right-clicking the Widget and selecting Preferences > Reports
+
+
+
+16/05/2008
+
+- NEW: The projects can now be archived. An archived project doesn't show up in any of the project lists and not reports are generated for it. The projects are not lost though as you can still see them by right-clicking on the project list and selecting "View archived projects".
+
+- NEW: Turkish localization by Çagdas Inan
+
+14/02/2008, v1.3.26:
+
+- Added Time Budget, Notes and Rate Per Hour property to the projects.
+- The default project is no longer necessary and can be deleted.
+
+01/12/2007, v1.2.24:
+
+- Added task description (double-click or right-click on a task)
+- Change the task description by clicking on the [+] icon
+- New preference: Restart the timer automatically (starting a new task) when the current project is changed
+
+18/11/2007, v1.1.19:
+
+- Option to view the reports by right-clicking on the Widget.
+- Auto-save current task and restore it if the computer or the engine (or the widget) crashes.
+- Added buttons to delete all tasks, delete all projects and reset projects' total 
+- French localization
+
+04/11/2007, v1.0.13:
+
+- First release

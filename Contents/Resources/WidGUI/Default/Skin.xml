@@ -1,0 +1,9 @@
+<skin>
+  <dropdownStyle textLeftOffset="10" defaultHeight="23" defaultWidth="100" buttonWidth="24" font="color:#FFFFFF;" />
+  <textBoxStyle borderOffsetX="1" borderOffsetY="1" defaultHeight="22" defaultWidth="100" />
+  <buttonStyle downTextOffset="1" defaultHeight="16" defaultWidth="100" font="font-size:12px; color:#111111;" />
+  <checkboxStyle defaultHeight="22" defaultWidth="100" font="color:#000000;" />
+  <labelStyle defaultHeight="22" defaultWidth="100" font="color:#000000;" />
+  <formStyle defaultHeight="22" defaultWidth="100" font="color:#000000;" shadowMargin="6,3,5,5" bgType="gradient" bgGradientColors="#ffffff, #dddddd" bgGradientStops="0,1" activeAreaMargin="7,,6,6"/>
+  <formTitleBarStyle font="color:#ffffff; font-weight:bold;" />
+</skin>

@@ -1,0 +1,157 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<?konfabulator xml-strict="true"?>
+
+<widget minimumVersion="4.0">
+
+
+	<settings>
+		<setting name="debug" value="off"/>
+		<setting name="allowCustomObjectAttributes" value="true"/>
+	</settings>
+
+
+
+
+	<!--------------- About box -->
+	
+	<about-box image="Resources/About.png">
+	
+		<about-text data="Time Vault" hOffset="115" vOffset="46" size="20" style="bold">
+			<shadow hOffset="0" vOffset="1" color="#ffffff"/>
+		</about-text>	
+		
+		<about-text data="Version" hOffset="115" vOffset="90" size="14" style="bold" color="#222222">	
+			<shadow hOffset="0" vOffset="1" color="#ffffff"/>
+		</about-text>	
+		
+		<about-version hOffset="170" vOffset="90" size="14" color="#222222" style="bold" />
+
+		<about-text data="View more widgets by pogopixels" hOffset="202" vOffset="125" size="11" color="#222222" url="http://www.pogopixels.com/">	
+			<shadow hOffset="0" vOffset="1" color="#ffffff"/>
+		</about-text>	
+		
+		<about-text data="Contact: laurent@pogopixels.com" hOffset="199" vOffset="141" size="11" color="#222222" url="mailto:laurent@pogopixels.com">	
+			<shadow hOffset="0" vOffset="1" color="#ffffff"/>
+		</about-text>	
+		
+		<about-text data="          " hOffset="33" vOffset="142" size="35" url="http://www.pogopixels.com/" />	
+				 
+	</about-box>	
+	
+
+	
+		
+		
+		
+	<!--------------- Preferences groups -->
+	
+	<preferenceGroup name="skin" icon="Resources/SkinIcon.png" />
+	<preferenceGroup name="time" icon="Resources/TimeIcon.png" />
+	<preferenceGroup name="report" icon="Resources/ReportIcon.png" />
+	
+	
+	
+	
+	
+	
+	<!--------------- Hidden preferences -->
+	
+	<preference name="lastSelectedProject" defaultValue="1" type="text" hidden="1" />	
+	<preference name="lastRightPartWidth" defaultValue="setme" type="text" hidden="1" />	
+	<preference name="lastDrawerHeight" defaultValue="300" type="text" hidden="1" />		
+	<preference name="windowLocation" defaultValue="setme" type="text" hidden="1" />		
+	<preference name="lastDrawerWidth" defaultValue="setme" type="text" hidden="1" />		
+	<preference name="lastSelectedProjectID" defaultValue="setme" type="text" hidden="1" />		
+	<preference name="lastSelectedTaskID" defaultValue="setme" type="text" hidden="1" />
+	<preference name="showArchivedProjects" defaultValue="0" type="text" hidden="1" />		
+	
+	
+	
+	
+	<!--------------- General preferences -->
+
+	<preference name="locale" defaultValue="default" type="popup" >
+		<option>Default</option>
+		<optionValue>default</optionValue>
+		<option>Français (French)</option>
+		<optionValue>fr</optionValue>	
+		<option>English (English)</option>
+		<optionValue>en</optionValue>	
+		<option>Türkçe (Turkish)</option>
+		<optionValue>tr</optionValue>	
+	</preference>			
+		
+	<preference name="expandStyle" defaultValue="1" type="popup" />
+	<preference name="enableAutoSave" defaultValue="1" type="checkbox" />		
+	<preference name="restartOnProjectChange" defaultValue="0" type="checkbox" />		
+	<preference name="useTrayIcon" defaultValue="0" type="checkbox" hidden="1" />	
+	<preference name="checkForNewVersion" defaultValue="1" type="checkbox" />
+
+
+	
+	
+	
+	<!--------------- Skin preferences -->
+	
+	<preference name="colorScheme" defaultValue="4" type="popup" group="skin" />		
+	
+	<preference name="glassColor1" defaultValue="#0d68ff" type="color" group="skin"/>		
+	<preference name="glassColor2" defaultValue="#0948b1" type="color" group="skin" />		
+
+	<preference name="headerFontColor" defaultValue="#ffffff" type="color" hidden="1" />			
+	<preference name="normalFontColor" defaultValue="#ffffff" type="color" hidden="1" />		
+	
+	
+	
+	
+	
+	<!--------------- Date and time preferences -->
+
+	<preference name="numberDateFormat" defaultValue="0" type="popup" group="time">
+		<option>31/12/2007</option>
+		<optionValue>0</optionValue>
+		<option>12/31/2007</option>
+		<optionValue>1</optionValue>	
+	</preference>		
+	
+	<preference name="useAmpm" defaultValue="0" type="checkbox" group="time" />
+
+
+
+
+	<!--------------- Report preferences -->
+
+	<preference name="dataFolder" defaultValue="setme" type="selector" style="save" group="report" />
+	<preference name="publishReports" defaultValue="1" type="checkbox" group="report" />
+
+	<preference name="reportColumn0" defaultValue="1" type="popup" group="report" />
+	<preference name="reportColumn1" defaultValue="2" type="popup" group="report" />
+	<preference name="reportColumn2" defaultValue="3" type="popup" group="report" />
+	<preference name="reportColumn3" defaultValue="0" type="popup" group="report" />
+	
+	<!--
+	<preference name="reportColumn4" defaultValue="0" type="popup" group="report" />
+	<preference name="reportColumn5" defaultValue="0" type="popup" group="report" />
+	<preference name="reportColumn6" defaultValue="0" type="popup" group="report" />
+		-->
+
+	<preference name="publishDailyReports" defaultValue="1" type="checkbox" group="report" />
+	<preference name="reportDataDelimiter" defaultValue="," type="text" group="report" />
+
+		
+		
+		
+	<!--------------- Actions -->
+		
+	<action trigger="onLoad" file="Main.js" />
+	<action trigger="onUnload"><![CDATA[onUnload();]]></action>	
+	
+	<window name="fakeWindow" title="YATT" >
+		<image src="Resources/Gray50.png" opacity="0"/>
+	</window>
+
+
+
+
+
+</widget>

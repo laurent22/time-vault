@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?><metadata>
+  <name>Time Vault</name>
+  <identifier>963c5240-8591-11dc-8ddf-0013E883C81B</identifier>  
+  <image src="Resources/DockBarIcon.png" usage="dock"/>
+  <image usage="security" src="Resources/ProgramIcon.png"/>
+  <copyright>(c) Pogopixels Ltd, 2007-2008</copyright>  
+  <author name="Laurent Cozic" organization="Pogopixels Ltd" href="http://www.pogopixels.com/" />
+  <version>1.5.51</version>  
+  <platform minVersion="4.0"/>
+</metadata>
