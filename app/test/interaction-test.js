@@ -407,3 +407,46 @@ ixCheck('a frame with a scrollbar can scroll its contents', () => {
 	if (frame.vScrollBar !== bar) return 'the scrollbar was not attached';
 	if (scrolled !== 40) return `scrollTop is ${scrolled}, expected 40`;
 });
+
+ixCheck('a context menu handler gets its items shown', () => {
+	// Konfabulator's contract: onContextMenu fills in contextMenuItems and
+	// the engine shows that menu once the handler returns. Storing the
+	// array without showing it left right-click dead on the event rows, the
+	// project list and the widget itself.
+	const f = new Frame();
+	document.body.appendChild(f.node);
+
+	let built = false;
+	f.onContextMenu = function () {
+		built = true;
+		const it = new MenuItem();
+		it.title = 'Delete';
+		this.contextMenuItems = [it];
+	};
+
+	f.node.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+	f.node.remove();
+
+	if (!built) return 'the handler never ran';
+});
+
+ixCheck('contextMenuItems is cleared before each handler runs', () => {
+	// Otherwise a handler that decides against a menu would show the one
+	// built on the previous right-click.
+	const f = new Frame();
+	document.body.appendChild(f.node);
+
+	let seen = null;
+	f.onContextMenu = function () {
+		seen = this.contextMenuItems.length;
+		const it = new MenuItem();
+		it.title = 'one';
+		this.contextMenuItems = [it];
+	};
+
+	f.node.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+	f.node.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+	f.node.remove();
+
+	if (seen !== 0) return `the second handler saw ${seen} stale items`;
+});

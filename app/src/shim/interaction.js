@@ -49,6 +49,9 @@
 			|| typeof k.onMouseUp === 'function'
 			|| typeof k.onMouseDrag === 'function'
 			|| typeof k.onMultiClick === 'function';
+		// onContextMenu is deliberately not listed: it only fires on the
+		// right button, which never starts a drag, and the event rows carry
+		// one — treating them as interactive would make the list undraggable.
 	}
 
 	document.addEventListener('mousedown', (e) => {

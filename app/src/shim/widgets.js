@@ -68,9 +68,9 @@
 			document.title = this._title;
 		}
 
-		// Konfabulator windows had a contextMenuItems array.
-		get contextMenuItems() { return this._contextMenuItems || []; }
-		set contextMenuItems(v) { this._contextMenuItems = v; }
+		// contextMenuItems lives on KonObject: the window is only one of
+		// several things with a context menu, and an accessor here would
+		// shadow the base field.
 	}
 
 	// --- MenuItem -----------------------------------------------------------

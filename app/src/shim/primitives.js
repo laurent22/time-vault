@@ -52,6 +52,8 @@ class KonObject {
 		this._id = '';
 		this._tooltip = '';
 		this._parent = null;
+		// Filled in by an onContextMenu handler; shown once it returns.
+		this.contextMenuItems = [];
 
 		this.subviews = [];
 
@@ -383,7 +385,31 @@ class KonObject {
 			document.addEventListener('mousemove', onMove, true);
 			document.addEventListener('mouseup', onUp, true);
 		});
-		this.node.addEventListener('contextmenu', (e) => fire('onContextMenu', e));
+		// Konfabulator's contract: the handler fills in contextMenuItems and
+		// the engine shows that menu once it returns. Without the second
+		// half, right-clicking the event rows, the project list and the
+		// widget itself all did nothing.
+		//
+		// Only the innermost element with items wins — stopPropagation keeps
+		// a row's menu from being replaced by the window's.
+		this.node.addEventListener('contextmenu', (e) => {
+			const handler = this.onContextMenu;
+			if (typeof handler !== 'function') return;
+
+			e.preventDefault();
+			e.stopPropagation();
+
+			// Cleared first so a handler that decides against a menu this
+			// time doesn't show the previous one.
+			this.contextMenuItems = [];
+			handler.call(this, e);
+
+			const items = this.contextMenuItems;
+			if (!items || items.length === 0) return;
+			if (typeof globalThis.popupMenu === 'function') {
+				globalThis.popupMenu(items, e.clientX, e.clientY);
+			}
+		});
 
 		// Konfabulator's onClick: a press and release on the same element.
 		// RoundButton drives the expand and resize buttons through it.
