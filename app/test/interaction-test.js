@@ -196,3 +196,58 @@ ixCheck('vAlign center shifts the element onto its offset', () => {
 		return `transform is ${JSON.stringify(img.node.style.transform)}`;
 	}
 });
+
+ixCheck('Image exposes srcWidth/srcHeight', () => {
+	// Imaging.js's 9-slice drawRectangleImage divides by these to find its
+	// corner size. Undefined makes that NaN and every drawImage silently
+	// draws nothing — which left the whole drawer with no background.
+	const img = new Image();
+	img.src = 'Resources/Skin/Default/DrawerBackground.png'; // 144x304
+	if (img.srcWidth !== 144) return `srcWidth ${img.srcWidth}`;
+	if (img.srcHeight !== 304) return `srcHeight ${img.srcHeight}`;
+});
+
+ixCheck('srcWidth survives an explicit size override', () => {
+	// srcWidth is the file's own size; width is what it's stretched to.
+	const img = new Image();
+	img.src = 'Resources/Skin/Default/DrawerBackground.png';
+	img.width = 400;
+	img.height = 300;
+	if (img.srcWidth !== 144) return `srcWidth became ${img.srcWidth}`;
+	if (img.width !== 400) return `width should be the override, got ${img.width}`;
+});
+
+ixCheck('an explicitly sized frame clips its children', () => {
+	// The drawer opens by animating from vOffset -height, sliding down from
+	// behind the widget. Without clipping the whole drawer is visible above
+	// the window for the length of the animation.
+	const frame = new Frame();
+	frame.width = 100;
+	frame.height = 50;
+	if (frame.node.style.overflow !== 'hidden') {
+		return `a sized frame should clip, got ${JSON.stringify(frame.node.style.overflow)}`;
+	}
+});
+
+ixCheck('an auto-sized frame does not clip', () => {
+	const frame = new Frame();
+	const child = new Image();
+	child.src = 'Resources/Skin/Default/Screw.png';
+	frame.appendChild(child);
+	if (frame.node.style.overflow === 'hidden') {
+		return 'an auto-sized frame should not clip its children';
+	}
+});
+
+ixCheck('sizing a frame for hit-testing does not make it clip', () => {
+	// An interactive frame is given a CSS size purely so there's something
+	// to click; it's still logically auto-sized.
+	const frame = new Frame();
+	frame.onMouseDown = () => {};
+	const icon = new Image();
+	icon.src = 'Resources/Skin/Default/RoundButtonBackground.png';
+	frame.appendChild(icon);
+	if (frame.node.style.overflow === 'hidden') {
+		return 'the hit area should not start clipping the children';
+	}
+});

@@ -275,6 +275,10 @@ class KonObject {
 			if (width > 0 && height > 0) {
 				this.node.style.width = `${width}px`;
 				this.node.style.height = `${height}px`;
+				// This size exists only so there's something to click. The
+				// frame is still logically auto-sized, so it must not start
+				// clipping its children the way an explicitly sized one does.
+				this.node.style.overflow = 'visible';
 			}
 		}
 	}
@@ -369,6 +373,7 @@ class Frame extends KonObject {
 	set width(v) {
 		this._width = v == null ? null : Number(v);
 		this.node.style.width = this._width == null ? '' : `${this._width}px`;
+		this._applyClipping();
 	}
 
 	get height() {
@@ -378,6 +383,17 @@ class Frame extends KonObject {
 	set height(v) {
 		this._height = v == null ? null : Number(v);
 		this.node.style.height = this._height == null ? '' : `${this._height}px`;
+		this._applyClipping();
+	}
+
+	// A Konfabulator frame clipped its children once it had an explicit
+	// size; an auto-sized one didn't. The drawer depends on it: it opens by
+	// animating from vOffset -height up behind the widget down to 0, and
+	// without clipping the whole drawer is visible above the window for the
+	// length of the animation.
+	_applyClipping() {
+		const sized = this._width != null || this._height != null;
+		this.node.style.overflow = sized ? 'hidden' : '';
 	}
 
 	// Measured from the shim objects rather than the DOM so it works before
@@ -399,6 +415,21 @@ class Image extends KonObject {
 		// Skin art is 1x and must stay crisp.
 		this.node.style.imageRendering = '-webkit-optimize-contrast';
 		this.node.draggable = false;
+	}
+
+	// Konfabulator's srcWidth/srcHeight: the file's own dimensions, which
+	// stay put when width/height are overridden to stretch the element.
+	// Imaging.js's 9-slice drawRectangleImage divides by these to find its
+	// corner size — undefined makes that NaN and every drawImage call
+	// silently draws nothing, which left the drawer with no background.
+	get srcWidth() {
+		if (this._natural) return this._natural[0];
+		return this.node.naturalWidth || 0;
+	}
+
+	get srcHeight() {
+		if (this._natural) return this._natural[1];
+		return this.node.naturalHeight || 0;
 	}
 
 	// The preloaded, already-decoded element for this source, if there is

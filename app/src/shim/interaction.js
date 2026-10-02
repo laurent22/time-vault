@@ -144,6 +144,52 @@
 	let stagePadX = 0;
 	let stagePadY = 0;
 
+	// True for a clipping container that currently shows none of its
+	// children — it occupies space but draws nothing, so it shouldn't hold
+	// the window open.
+	function isEmptyClipper(el) {
+		if (getComputedStyle(el).overflow === 'visible') return false;
+		if (el.children.length === 0) return false;
+
+		const box = el.getBoundingClientRect();
+		for (const child of el.querySelectorAll('*')) {
+			const cs = getComputedStyle(child);
+			if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+			if (Number(cs.opacity) === 0) continue;
+			const r = child.getBoundingClientRect();
+			if (r.width === 0 || r.height === 0) continue;
+			// Any overlap with the container means something is on screen.
+			if (r.bottom > box.top && r.top < box.bottom
+				&& r.right > box.left && r.left < box.right) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	// Intersect an element's rect with every clipping ancestor, so only the
+	// visible part counts toward the window size. Returns null when nothing
+	// of it is actually on screen.
+	function clipToAncestors(el, rect) {
+		let left = rect.left;
+		let top = rect.top;
+		let right = rect.right;
+		let bottom = rect.bottom;
+
+		for (let p = el.parentElement; p && p.id !== 'stage'; p = p.parentElement) {
+			const cs = getComputedStyle(p);
+			if (cs.overflow === 'visible') continue;
+			const pr = p.getBoundingClientRect();
+			if (pr.left > left) left = pr.left;
+			if (pr.top > top) top = pr.top;
+			if (pr.right < right) right = pr.right;
+			if (pr.bottom < bottom) bottom = pr.bottom;
+		}
+
+		if (right <= left || bottom <= top) return null;
+		return { left, top, width: right - left, height: bottom - top };
+	}
+
 	function fitWindowToContent() {
 		const stage = document.getElementById('stage');
 		if (!stage) return;
@@ -165,12 +211,26 @@
 			if (Number(cs.opacity) === 0) continue;
 			const r = el.getBoundingClientRect();
 			if (r.width === 0 || r.height === 0) continue;
-			const left = r.left - origin.left;
-			const top = r.top - origin.top;
+
+			// A clipping container is a window onto its children, not content
+			// in itself: the drawer container keeps its full height while the
+			// drawer is slid up out of sight behind the widget, and counting
+			// the container would hold the window open after it closed.
+			if (isEmptyClipper(el)) continue;
+
+			// An element inside a clipping ancestor only contributes the part
+			// that's actually drawn. The drawer opens by sliding down from
+			// vOffset -height behind the widget, and counting its full rect
+			// would grow the window upward to follow something invisible.
+			const box = clipToAncestors(el, r);
+			if (!box) continue;
+
+			const left = box.left - origin.left;
+			const top = box.top - origin.top;
 			if (left < minLeft) minLeft = left;
 			if (top < minTop) minTop = top;
-			if (left + r.width > maxRight) maxRight = left + r.width;
-			if (top + r.height > maxBottom) maxBottom = top + r.height;
+			if (left + box.width > maxRight) maxRight = left + box.width;
+			if (top + box.height > maxBottom) maxBottom = top + box.height;
 		}
 
 		// Some of the widget's own layout lands slightly above or left of its
