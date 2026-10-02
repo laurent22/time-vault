@@ -67,9 +67,14 @@ function buildHtml(groups, title) {
 	          them is never useful and looks broken when it highlights. */
 	       user-select: none; -webkit-user-select: none; cursor: default; }
 	input[type=text], select, textarea { user-select: text; -webkit-user-select: text; cursor: auto; }
-	.tabs { display: flex; gap: 2px; padding: 10px 12px 0; flex: none; }
+	/* Tabs scroll rather than wrap if they ever outgrow the window. */
+	.tabs { display: flex; gap: 2px; padding: 10px 12px 0; flex: none;
+	        overflow-x: auto; scrollbar-width: none; }
+	.tabs::-webkit-scrollbar { display: none; }
 	.tab { font: inherit; padding: 5px 14px; border: 1px solid #bbb; border-bottom: none;
-	       border-radius: 5px 5px 0 0; background: #ddd; cursor: pointer; }
+	       border-radius: 5px 5px 0 0; background: #ddd; cursor: pointer;
+	       /* A wrapped tab label looks broken and makes the row ragged. */
+	       white-space: nowrap; flex: none; }
 	.tab.active { background: #fff; font-weight: 500; }
 	.panels { flex: 1; overflow-y: auto; background: #fff; border-top: 1px solid #bbb;
 	          padding: 14px 16px; }

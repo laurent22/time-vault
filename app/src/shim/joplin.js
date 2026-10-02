@@ -1,30 +1,25 @@
 // The Joplin sync, as an opt-in preference.
 //
+// One setting, joplinSyncEnabled, not declared in the .kon since it's new.
 // Off by default: it talks to another application over the network and needs
-// authorisation, so it shouldn't appear in the UI at all unless asked for.
-// Three settings, none declared in the .kon since they're new:
+// authorisation, so it shouldn't happen unless asked for.
 //
-//   joplinSyncEnabled   "1" to switch the feature on
-//   joplinSyncOnStop    "1" to sync automatically after each timed entry
-//   joplinSyncOnQuit    "1" to sync when the app closes
-//
-// Enabling it only reveals the commands; the first actual sync is what
-// triggers Joplin's authorisation prompt.
+// When on, the sync runs after each timed entry and when the app quits —
+// a setting called "Sync to Joplin" that only revealed a menu item would be
+// a strange thing to switch on. The first sync is what triggers Joplin's
+// authorisation prompt.
 
 'use strict';
 
 (function () {
 	const host = globalThis.tvHost || {};
 
-	const pref = (name) => globalThis.preferences[name];
-	const isOn = (name) => pref(name).value === '1';
-
 	function setPref(name, on) {
-		pref(name).value = on ? '1' : '0';
+		globalThis.preferences[name].value = on ? '1' : '0';
 		if (typeof globalThis.savePreferences === 'function') globalThis.savePreferences();
 	}
 
-	const enabled = () => isOn('joplinSyncEnabled');
+	const enabled = () => globalThis.preferences.joplinSyncEnabled.value === '1';
 
 	globalThis.konJoplinEnabled = enabled;
 	globalThis.konJoplinSetEnabled = (on) => { setPref('joplinSyncEnabled', on); publish(); };
@@ -74,7 +69,7 @@
 			win.toggleEventTimer = function (...args) {
 				const wasRunning = this.opened === false;
 				const result = originalToggle.apply(this, args);
-				if (wasRunning && this.opened === true && isOn('joplinSyncOnStop')) {
+				if (wasRunning && this.opened === true) {
 					syncQuietly('stopping the timer');
 				}
 				return result;
@@ -103,7 +98,7 @@
 	// Sync on quit, if asked to. beforeunload is synchronous, so this can
 	// only start the request — the main process finishes it during shutdown.
 	globalThis.addEventListener('beforeunload', () => {
-		if (enabled() && isOn('joplinSyncOnQuit') && host.joplinSyncOnQuit) {
+		if (enabled() && host.joplinSyncOnQuit) {
 			host.joplinSyncOnQuit();
 		}
 	});

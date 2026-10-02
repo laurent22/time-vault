@@ -16,6 +16,10 @@
 (function () {
 	const host = globalThis.tvHost || {};
 
+	// Titles for groups the port adds, which the 2008 strings files can't
+	// know about.
+	const KON_GROUP_TITLES = { joplin: 'Joplin' };
+
 	// Konfabulator showed hidden preferences nowhere; they're state, not
 	// settings (last window position, last selected project, and so on).
 	function visiblePreferences() {
@@ -34,9 +38,13 @@
 
 		for (const key of Object.keys(groups)) {
 			const g = groups[key];
-			// Main.js sets .title from "preferenceGroup_<key>" at load.
-			// Same for groups: the port's own tab has no string to look up.
-			out.push({ key, title: loc(`preferenceGroup_${key}`) || g.title || key, names: [] });
+			// Main.js sets .title from "preferenceGroup_<key>" for every group
+			// it iterates — including the port's own, which has no string, so
+			// it ends up holding the raw key. Treat that as "not translated"
+			// and fall back to the schema's title.
+			const assigned = g.title && g.title !== `preferenceGroup_${key}` ? g.title : null;
+			const title = assigned || loc(`preferenceGroup_${key}`) || KON_GROUP_TITLES[key] || key;
+			out.push({ key, title, names: [] });
 		}
 
 		for (const name of visiblePreferences()) {

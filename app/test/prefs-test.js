@@ -31,14 +31,13 @@ prefCheck('every preference declared in the .kon is present', () => {
 	if (declared.length !== 32) return `the .kon declares 32; this list has ${declared.length}`;
 });
 
-prefCheck('the port\'s own settings are off by default', () => {
-	// Joplin sync talks to another app and needs authorisation, so it must
-	// be opt-in rather than something that just starts happening.
-	for (const name of ['joplinSyncEnabled', 'joplinSyncOnStop', 'joplinSyncOnQuit']) {
-		const p = KON_PREFS_SCHEMA[name];
-		if (!p) return `${name} is not in the schema`;
-		if (p.defaultValue !== '0') return `${name} defaults to ${p.defaultValue}, should be 0`;
-	}
+prefCheck('the Joplin sync is off by default', () => {
+	// It talks to another app over the network and needs authorisation, so
+	// it must be opt-in rather than something that just starts happening.
+	const p = KON_PREFS_SCHEMA.joplinSyncEnabled;
+	if (!p) return 'joplinSyncEnabled is not in the schema';
+	if (p.defaultValue !== '0') return `defaults to ${p.defaultValue}, should be 0`;
+	if (preferences.joplinSyncEnabled.value === '1') return 'enabled on a fresh profile';
 });
 
 prefCheck('defaults come from the .kon manifest', () => {
