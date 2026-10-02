@@ -165,3 +165,4 @@
 
 "mainWindow_ctxMenu_alwaysOnTop" = "Toujours au premier plan";
 "mainWindow_ctxMenu_zoom" = "Zoom";
+"mainWindow_ctxMenu_about" = "À propos de TimeVault";

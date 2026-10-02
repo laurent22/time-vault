@@ -177,3 +177,4 @@
 "editProject_ArchivedDescription" = "Tick this box once the project is finished in order to exclude it from the project lists and reports.";
 "mainWindow_ctxMenu_alwaysOnTop" = "Always on top";
 "mainWindow_ctxMenu_zoom" = "Zoom";
+"mainWindow_ctxMenu_about" = "About TimeVault";

@@ -55,6 +55,13 @@
 			toggle.onSelect = function () { setEnabled(!isEnabled()); };
 			items.push(toggle);
 
+			// The original had an About box; Konfabulator's own menu opened
+			// it, so the widget never offered one itself.
+			const about = new MenuItem();
+			about.title = loc('mainWindow_ctxMenu_about') || 'About TimeVault';
+			about.onSelect = function () { if (host.showAbout) host.showAbout(); };
+			items.push(about);
+
 			this.win.contextMenuItems = items;
 		};
 	});

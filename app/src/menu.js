@@ -7,6 +7,7 @@
 'use strict';
 
 const { app, Menu, shell } = require('electron');
+const aboutHost = require('./about-host');
 
 function install(getWindow) {
 	const send = (channel) => () => {
@@ -20,7 +21,8 @@ function install(getWindow) {
 		...(isMac ? [{
 			label: app.name,
 			submenu: [
-				{ role: 'about' },
+				// The widget's own about box, not the stock one.
+				{ label: 'About TimeVault', click: () => aboutHost.show(getWindow()) },
 				{ type: 'separator' },
 				{ label: 'Preferences…', accelerator: 'Cmd+,', click: send('menu:preferences') },
 				{ type: 'separator' },
@@ -68,6 +70,10 @@ function install(getWindow) {
 		{
 			role: 'help',
 			submenu: [
+				...(isMac ? [] : [
+					{ label: 'About TimeVault', click: () => aboutHost.show(getWindow()) },
+					{ type: 'separator' },
+				]),
 				{
 					label: 'Original Widget (2008)',
 					click: () => shell.openExternal('https://en.wikipedia.org/wiki/Yahoo!_Widgets'),

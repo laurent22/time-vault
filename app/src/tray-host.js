@@ -80,6 +80,7 @@ function buildMenu() {
 			click: () => send('tray:preferences'),
 		},
 		{ type: 'separator' },
+		{ label: 'About TimeVault', click: () => send('tray:about') },
 		{ label: 'Quit TimeVault', click: () => app.quit() },
 	]);
 

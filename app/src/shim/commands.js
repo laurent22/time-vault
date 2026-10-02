@@ -51,6 +51,9 @@
 
 		// A widget dragged off-screen, or onto a display that's since been
 		// disconnected, would otherwise be unreachable.
+		'menu:about': () => { if (host.showAbout) host.showAbout(); },
+		'tray:about': () => { if (host.showAbout) host.showAbout(); },
+
 		'menu:zoom-in': () => globalThis.konSetZoom(nextZoom(1)),
 		'menu:zoom-out': () => globalThis.konSetZoom(nextZoom(-1)),
 		'menu:zoom-reset': () => globalThis.konSetZoom(1),
