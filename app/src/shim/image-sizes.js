@@ -7,6 +7,7 @@
 
 globalThis.KON_IMAGE_SIZES = {
 	"About.png": [396, 180],
+	"AboutBackground.png": [396, 180],
 	"DockBarIcon.png": [75, 70],
 	"Gray50.png": [1, 1],
 	"ProgramIcon.png": [128, 128],
@@ -68,6 +69,10 @@ globalThis.KON_IMAGE_SIZES = {
 	"Skin/Default/StartButtonStopIcon.png": [8, 10],
 	"SkinIcon.png": [32, 32],
 	"TimeIcon.png": [32, 32],
+	"TrayIcon.png": [16, 16],
+	"TrayIcon@2x.png": [32, 32],
+	"TrayIconRunning.png": [16, 16],
+	"TrayIconRunning@2x.png": [32, 32],
 	"White.png": [1, 1],
 	"WidGUI/Default/ButtonDown.png": [68, 16],
 	"WidGUI/Default/ButtonOver.png": [68, 16],

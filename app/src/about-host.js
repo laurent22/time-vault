@@ -5,11 +5,12 @@
 // window; the widget only described what went in it.
 //
 // Positions, sizes, colours and shadows below are taken verbatim from
-// Contents/Time Vault.kon, so it looks as it did in 2008. The one change is
-// the contact address, which the repo no longer carries.
+// Contents/Time Vault.kon, so the title and version sit where they did.
 //
-// Two versions are shown: the widget's own, from the original manifest, and
-// the port's, since they're different things with different histories.
+// The Pogopixels branding is gone — the logo painted out of the artwork by
+// tools/gen-about-image.js, and the links with it — since the port isn't a
+// Pogopixels product. The version shown is the widget's own, from the
+// original manifest.
 
 'use strict';
 
@@ -37,27 +38,13 @@ function widgetVersion() {
 	return null;
 }
 
-// The port's own version. app.getVersion() reports Electron's here, since
-// this window is created outside the app's package context.
-function portPackageVersion() {
-	try {
-		const pkg = JSON.parse(
-			fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-		if (pkg.version) return pkg.version;
-	} catch {
-		// Falls through.
-	}
-	return app.getVersion();
-}
-
 function buildHtml(version) {
-	const background = path.join(__dirname, '..', 'assets', 'About.png');
+	const background = path.join(__dirname, '..', 'assets', 'AboutBackground.png');
 	// Inlined, so the window needs no file access of its own.
 	const data = fs.readFileSync(background).toString('base64');
 
 	// Konfabulator's <shadow hOffset="0" vOffset="1" color="#ffffff"/>.
 	const shadow = 'text-shadow: 0 1px 0 #ffffff;';
-	const portVersion = portPackageVersion();
 
 	return `<!doctype html>
 <html><head><meta charset="utf-8"><title>About TimeVault</title><style>
@@ -81,16 +68,8 @@ function buildHtml(version) {
 
 	<div class="t" style="left:115px; top:90px; font-size:14px; font-weight:bold; color:#222222; ${shadow}">Version</div>
 	<div class="t" style="left:170px; top:90px; font-size:14px; font-weight:bold; color:#222222;">${version}</div>
-	<div class="t" style="left:115px; top:104px; font-size:10px; color:#666666; ${shadow}">Electron port ${portVersion}</div>
 
-	<div class="t" style="left:202px; top:125px; font-size:11px; color:#222222; ${shadow}"><a href="#" data-url="http://www.pogopixels.com/">View more widgets by pogopixels</a></div>
-
-	<div class="t" style="left:199px; top:141px; font-size:11px; color:#222222; ${shadow}"><a href="#" data-url="https://github.com/laurent22">Originally by Laurent Cozic</a></div>
-
-	<!-- The logo is a link, as it was in the original: an empty text block
-	     sized to cover it. -->
-	<a href="#" data-url="http://www.pogopixels.com/"
-	   style="position:absolute; left:28px; top:112px; width:120px; height:34px;"></a>
+	<div class="t" style="left:0; top:148px; width:${WIDTH}px; text-align:center; font-size:11px; color:#222222; ${shadow}">Copyright (c) Laurent Cozic, 2007, 2026</div>
 
 	<script>
 		const { ipcRenderer } = require('electron');
