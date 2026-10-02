@@ -44,7 +44,15 @@ function normaliseRow(row) {
 const ops = {
 	open(filePath) {
 		fs.mkdirSync(path.dirname(filePath), { recursive: true });
-		const db = new DatabaseSync(filePath);
+		const db = new DatabaseSync(filePath, {
+			// The widget's SQL quotes string literals with double quotes, e.g.
+			//   INSERT INTO Projects (Name) VALUES ("____default____")
+			// SQLite accepted that in 2008 as a MySQL compatibility
+			// misfeature; modern SQLite reads a double-quoted token as an
+			// identifier and rejects it. Without this the schema creation
+			// fails halfway through — the Events table never gets created.
+			enableDoubleQuotedStringLiterals: true,
+		});
 		const id = nextHandle++;
 		handles.set(id, db);
 		return id;
@@ -61,15 +69,16 @@ const ops = {
 	exec(id, sql) {
 		const db = handles.get(id);
 		if (!db) throw Object.assign(new Error('database not open'), { errCode: SQLITE_BUSY });
-		// node:sqlite's exec() handles multi-statement SQL but reports
-		// nothing back; prepare/run gives us changes and lastInsertRowid,
-		// which Database.js exposes. Fall back to exec() for scripts that
-		// prepare() can't take in one go (e.g. BEGIN/COMMIT pairs).
+		// prepare/run reports changes and lastInsertRowid, which Database.js
+		// exposes; exec() doesn't, but it's the only one that takes multiple
+		// statements in one string. Try the informative path first and fall
+		// back only for genuinely multi-statement SQL — a blanket catch here
+		// silently swallowed a schema-creation failure once already.
 		try {
-			const stmt = db.prepare(sql);
-			const r = stmt.run();
+			const r = db.prepare(sql).run();
 			return { changes: Number(r.changes || 0), lastInsertRowid: Number(r.lastInsertRowid || 0) };
-		} catch {
+		} catch (e) {
+			if (!/more than one statement/i.test(e.message || '')) throw e;
 			db.exec(sql);
 			return { changes: 0, lastInsertRowid: 0 };
 		}

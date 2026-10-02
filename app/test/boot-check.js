@@ -12,12 +12,14 @@ const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
 const host = require('../src/host');
 const sqlHost = require('../src/sql-host');
+const formHost = require('../src/form-host');
 
 app.on('window-all-closed', () => {});
 
 app.whenReady().then(async () => {
 	host.register();
 	sqlHost.register();
+	formHost.register();
 
 	const win = new BrowserWindow({
 		show: false,

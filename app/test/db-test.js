@@ -70,6 +70,50 @@ dbCheck('lastInsertRowID is reported after an insert', () => {
 	if (second !== 2) return `second insert rowid should be 2, got ${second}`;
 });
 
+dbCheck('double-quoted string literals still work, as in 2008 SQLite', () => {
+	// EventDatabase.js creates its schema with
+	//   INSERT INTO Projects (Name) VALUES ("____default____")
+	// Modern SQLite reads a double-quoted token as an identifier and rejects
+	// it. Without the compatibility flag the schema creation dies partway and
+	// the Events table is never created — silently, because Database.js
+	// swallows SQL errors.
+	const f = scratchPath('shim-db-dqs.db3');
+	filesystem.remove(f);
+
+	const db = new SQLite();
+	db.open(f);
+	db.exec('CREATE TABLE Projects (ID INTEGER PRIMARY KEY, Name TEXT)');
+	db.exec('INSERT INTO Projects (Name) VALUES ("____default____")');
+	const rows = db.query('SELECT * FROM Projects');
+	const row = rows.current();
+	rows.dispose();
+	db.close();
+	filesystem.remove(f);
+
+	if (!row) return 'the double-quoted insert produced no row';
+	if (row.Name !== '____default____') return `got ${JSON.stringify(row.Name)}`;
+});
+
+dbCheck('a genuinely bad statement is not silently swallowed', () => {
+	// The exec() fallback used to catch every error and retry with exec(),
+	// which hid real failures.
+	const f = scratchPath('shim-db-strict.db3');
+	filesystem.remove(f);
+
+	const db = new SQLite();
+	db.open(f);
+	let threw = false;
+	try {
+		db.exec('INSERT INTO NoSuchTable (x) VALUES (1)');
+	} catch {
+		threw = true;
+	}
+	db.close();
+	filesystem.remove(f);
+
+	if (!threw) return 'a write to a missing table should throw';
+});
+
 dbCheck('a bad statement raises an error carrying errMsg', () => {
 	const f = scratchPath('shim-db-err.db3');
 	filesystem.remove(f);

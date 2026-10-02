@@ -88,6 +88,21 @@ WidGUI's skin parser iterates children assuming every one is a style element.
 shimmed as `KonURL`; the single call site in `Main.js` was changed to match.
 This is one of the very few edits to ported code.
 
+**The widget's SQL uses double-quoted string literals.** `EventDatabase.js`
+writes `INSERT INTO Projects (Name) VALUES ("____default____")`. SQLite
+accepted that in 2008 as a MySQL-compatibility misfeature; modern SQLite reads
+a double-quoted token as an *identifier* and rejects it. `node:sqlite` is
+opened with `enableDoubleQuotedStringLiterals: true` to preserve the original
+behaviour. Without it, schema creation dies partway — the `Events` table is
+never created — and silently, because `Database.js` swallows SQL errors.
+
+**`form()` and `alert()` are synchronous and must stay that way.** The ported
+code reads `results[0]` immediately after `form()` returns, and `alert()`
+returns the index of the button pressed. Both are implemented as modal windows
+in the main process answered over `ipcRenderer.sendSync`: the renderer blocks
+while the main process keeps running, which is the freeze Konfabulator had.
+`event.returnValue` can be assigned asynchronously — verified.
+
 **Script order differs from the original.** Konfabulator resolved
 `includeFile()` on demand, so order didn't matter. Here `FrameWrapper.js` must
 precede `RoundButton.js` and `FlashingButton.js`, and `includeFile` must exist

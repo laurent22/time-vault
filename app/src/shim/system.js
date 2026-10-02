@@ -13,9 +13,9 @@ globalThis.print = function print(...args) {
 	console.log(...args);
 };
 
-globalThis.alert = globalThis.alert || function alert(msg) {
-	console.warn('[alert]', msg);
-};
+// alert() is Konfabulator's message box, not the browser's — it takes button
+// labels and returns the index pressed. Defined in shim/widgets.js, which has
+// the host bridge.
 
 // --- Timer ----------------------------------------------------------------
 

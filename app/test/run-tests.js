@@ -20,6 +20,7 @@ app.setPath('userData', TEST_USER_DATA);
 
 const host = require('../src/host');
 const sqlHost = require('../src/sql-host');
+const formHost = require('../src/form-host');
 
 app.on('window-all-closed', () => {});
 
@@ -28,6 +29,7 @@ app.whenReady().then(async () => {
 	// filesystem and preference tests exercise the actual implementation.
 	host.register();
 	sqlHost.register();
+	formHost.register();
 
 	const win = new BrowserWindow({
 		show: false,

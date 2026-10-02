@@ -21,6 +21,12 @@ contextBridge.exposeInMainWorld('tvHost', {
 	// --- sqlite (sync) ---
 	sql: (method, ...args) => ipcRenderer.sendSync('host:sql', method, ...args),
 
+	// --- dialogs (sync; the renderer blocks while the modal is up, as the
+	//     original did) ---
+	form: (items, title, okLabel, cancelLabel) =>
+		ipcRenderer.sendSync('host:form', items, title, okLabel, cancelLabel),
+	alert: (message, buttons) => ipcRenderer.sendSync('host:alert', message, buttons),
+
 	// --- preferences ---
 	loadPreferences: () => ipcRenderer.sendSync('host:load-preferences'),
 	savePreferences: (values) => ipcRenderer.send('host:save-preferences', values),

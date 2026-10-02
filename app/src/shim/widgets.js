@@ -207,6 +207,39 @@
 		}
 	}
 
+	// --- form() and alert() -------------------------------------------------
+	// Both were synchronous in Konfabulator and the ported code depends on it:
+	// form() returns an array of strings (or null on cancel) that Main.js
+	// indexes immediately, and alert() returns the index of the button pressed.
+	// The renderer blocks on a sync IPC call while the main process drives the
+	// dialog — the same freeze the original had.
+
+	globalThis.form = function form(items, title, okLabel, cancelLabel) {
+		if (!host.form) {
+			console.warn('[form] no host bridge');
+			return null;
+		}
+		// FormField instances have to be plain objects to cross IPC.
+		const plain = (items || []).map((it) => ({
+			type: it.type || 'text',
+			title: it.title || '',
+			description: it.description || '',
+			defaultValue: it.defaultValue === undefined || it.defaultValue === null
+				? '' : String(it.defaultValue),
+			option: it.option || null,
+			optionValue: it.optionValue || null,
+		}));
+		return host.form(plain, title || '', okLabel || 'OK', cancelLabel || 'Cancel');
+	};
+
+	globalThis.alert = function alert(message, ...buttons) {
+		if (!host.alert) {
+			console.warn('[alert]', message);
+			return 0;
+		}
+		return host.alert(message, buttons);
+	};
+
 	Object.assign(globalThis, { Window, MenuItem, FormField, ScrollBar });
 	// Shadowing the DOM's URL would break anything that relies on it, so the
 	// Konfabulator one is only installed under its own name; Main.js's single
