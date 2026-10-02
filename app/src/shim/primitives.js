@@ -643,7 +643,12 @@ class Text extends KonObject {
 		this._color = null;
 
 		this.node.style.whiteSpace = 'nowrap';
-		this.node.style.lineHeight = 'normal';
+		// Konfabulator drew text centred on the line it was given. CSS
+		// 'normal' leaves the glyphs riding high in the line box — enough
+		// that WidGUI's buttons, which centre the box inside a 16px button,
+		// still looked top-aligned. A line-height of 1 makes the box hug the
+		// glyphs, so centring the box centres what you actually see.
+		this.node.style.lineHeight = '1';
 
 		// Writing to text.style.fontSize etc. should hit the DOM directly.
 		this.style = this.node.style;
