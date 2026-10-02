@@ -128,7 +128,10 @@ class JoplinClient {
 	}
 
 	// Step 3: poll until the user accepts or rejects in Joplin.
-	// Returns the API token, or null if rejected.
+	//
+	// Returns the API token, or null if the request was rejected, superseded
+	// or never answered. Only a genuine transport failure throws: waiting for
+	// someone to notice a prompt is an ordinary outcome, not an error.
 	async waitForAuth(authToken, { intervalMs = 1000, timeoutMs = 120000, onWaiting } = {}) {
 		const deadline = Date.now() + timeoutMs;
 
@@ -143,11 +146,19 @@ class JoplinClient {
 			}
 			if (body.status === 'rejected') return null;
 
+			// Joplin keeps only the most recent auth token, so a second POST
+			// /auth invalidates this one and /auth/check answers with an
+			// error instead of a status. That means another attempt has taken
+			// over; this one just stops rather than reporting a failure.
+			if (body.error) return null;
+
 			if (onWaiting) onWaiting();
 			await new Promise((resolve) => setTimeout(resolve, intervalMs));
 		}
 
-		throw new Error('timed out waiting for Joplin to authorise the request');
+		// Nobody answered in time. The prompt is still sitting in Joplin and
+		// the next sync will ask again, so this is a null rather than a throw.
+		return null;
 	}
 
 	// Confirms a stored token still works — Joplin's tokens can be revoked.

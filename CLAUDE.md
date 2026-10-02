@@ -201,6 +201,21 @@ false failure.
 `test/layout-probe.js` dumps rendered geometry so layout can be checked
 without a screenshot.
 
+**Joplin keeps only the newest auth token.** `POST /auth` replaces it, so a
+second request invalidates the first: `/auth/check` then answers
+`{"error":"...Invalid auth token..."}` rather than a status, and a wait on the
+stale token collapses in about two milliseconds. Two sync triggers arriving
+together was enough. `joplin-host.js` serialises authorisation through one
+in-flight promise, and `waitForAuth` treats that error — and a timeout — as a
+quiet `null` rather than a throw. Both used to surface as a failure dialog
+about a second after the attempt started, while Joplin's real prompt was still
+sitting there unanswered.
+
+**Joplin's authorisation prompt is rendered inside the Joplin window**, not as
+a native alert — see `packages/app-desktop/gui/Root.tsx` in the Joplin source.
+So an always-on-top widget, or any modal of our own, hides the thing the user
+is being told to go and click. The sync drops always-on-top while it waits.
+
 **`tvHost` cannot be spied on.** `contextBridge.exposeInMainWorld` freezes the
 object it exposes, so `tvHost.someCall = fn` fails *silently* in the renderer —
 non-strict assignment to a frozen property is a no-op, not a throw. A test

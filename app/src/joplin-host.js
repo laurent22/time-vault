@@ -7,7 +7,9 @@
 
 'use strict';
 
-const { app, ipcMain, dialog, BrowserWindow } = require('electron');
+// No `dialog`: the sync is deliberately silent. The only interface is
+// Joplin's own authorisation prompt.
+const { app, ipcMain, BrowserWindow } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -43,24 +45,27 @@ function forgetToken() {
 	try { fs.rmSync(TOKEN_FILE(), { force: true }); } catch { /* nothing to do */ }
 }
 
+// Only ever one authorisation in flight.
+//
+// POST /auth replaces Joplin's stored auth token, so a second request
+// invalidates the first: /auth/check then answers "Invalid auth token", the
+// wait rejects immediately, and the whole attempt collapses about a second
+// after starting. Two triggers arriving together is enough to cause it.
+let authInFlight = null;
+
 // Connects, authorising if there's no usable token yet. Returns a ready
-// client, or null if the user declined or Joplin isn't running.
+// client, or null if that isn't possible right now.
+//
+// Silent throughout: Joplin not running, or authorisation not yet granted,
+// are ordinary states for a set-and-forget sync, not errors to report. The
+// only interface is Joplin's own prompt, which appears inside the Joplin
+// window reading "The Web Clipper needs your authorisation to access your
+// data.". Nothing is shown from here, so there is no dialog to cover it.
 async function connect(parentWindow, { interactive = true } = {}) {
 	const stored = loadToken();
 	const client = new JoplinClient(stored.port, stored.token);
 
-	if (!await client.connect()) {
-		if (interactive) {
-			dialog.showMessageBoxSync(parentWindow || undefined, {
-				type: 'warning',
-				message: 'Joplin was not found.',
-				detail: 'Start Joplin and make sure the Web Clipper service is enabled '
-					+ '(Joplin → Settings → Web Clipper), then try again.',
-				buttons: ['OK'],
-			});
-		}
-		return null;
-	}
+	if (!await client.connect()) return null;
 
 	if (await client.tokenIsValid()) {
 		// The port can change between runs, so keep the stored copy current.
@@ -68,77 +73,41 @@ async function connect(parentWindow, { interactive = true } = {}) {
 		return client;
 	}
 
-	// A background sync won't interrupt to ask for authorisation: it wasn't
-	// asked for at this moment. Switching the setting on is what prompts, and
-	// the menu commands prompt on demand.
+	// Only an explicitly requested sync asks for authorisation. A background
+	// one skips, and the next trigger tries again.
 	if (!interactive) return null;
 
-	// No token, or it's been revoked: ask for one. This dispatches the
-	// request into Joplin, which renders a modal *inside its own window*
-	// reading "The Web Clipper needs your authorisation to access your data."
-	// — not a native dialog, so it can be hidden behind other windows.
-	const authToken = await client.requestAuth();
+	if (authInFlight) return authInFlight;
 
-	// Get out of the way so that modal is reachable. The widget is frameless
-	// and often always-on-top, which puts it above Joplin; a modal sheet of
-	// our own would sit on top of everything and block this process while
-	// Joplin waits for an answer that can't be given. That combination is
-	// exactly why the prompt looked like it never appeared.
-	const wasAlwaysOnTop = parentWindow && !parentWindow.isDestroyed()
-		&& parentWindow.isAlwaysOnTop();
-	if (wasAlwaysOnTop) parentWindow.setAlwaysOnTop(false);
+	authInFlight = (async () => {
+		// Dispatches the request into Joplin, which shows its prompt.
+		const authToken = await client.requestAuth();
 
-	// Polling starts before anything is shown, so accepting in Joplin is
-	// noticed whether or not the notice below is dismissed first.
-	const pending = client.waitForAuth(authToken, { timeoutMs: 180000 });
+		// Drop always-on-top for the duration: the widget would otherwise
+		// float above Joplin's window and hide the prompt inside it.
+		const wasAlwaysOnTop = parentWindow && !parentWindow.isDestroyed()
+			&& parentWindow.isAlwaysOnTop();
+		if (wasAlwaysOnTop) parentWindow.setAlwaysOnTop(false);
 
-	// Non-blocking: showMessageBox (not ...Sync) lets this process keep
-	// polling, and no parent window means it doesn't become a sheet attached
-	// to — and stacked above — the widget. There's no API to dismiss it
-	// programmatically, so it says to close it rather than promising it will
-	// go by itself.
-	dialog.showMessageBox({
-		type: 'info',
-		message: 'Authorise TimeVault in Joplin',
-		detail: 'Switch to Joplin and choose "Grant authorisation".\n\n'
-			+ 'The request appears inside the Joplin window rather than as a '
-			+ 'separate alert, so bring Joplin to the front if you can\'t see '
-			+ 'it.\n\nYou can close this notice; TimeVault keeps waiting for '
-			+ 'about three minutes either way.',
-		buttons: ['OK'],
-		defaultId: 0,
-		cancelId: 0,
-	});
-
-	let token = null;
-	let timedOut = false;
-	try {
-		token = await pending;
-	} catch {
-		timedOut = true;
-	} finally {
-		if (wasAlwaysOnTop && parentWindow && !parentWindow.isDestroyed()) {
-			parentWindow.setAlwaysOnTop(true);
+		try {
+			const token = await client.waitForAuth(authToken, { timeoutMs: 180000 });
+			if (!token) return null; // rejected, or never answered
+			saveToken(token, client.port);
+			return client;
+		} catch (e) {
+			// A timeout is not a failure worth reporting: the prompt is still
+			// sitting in Joplin, and the next sync will ask again.
+			console.warn('[joplin] authorisation did not complete:', e.message);
+			return null;
+		} finally {
+			if (wasAlwaysOnTop && parentWindow && !parentWindow.isDestroyed()) {
+				parentWindow.setAlwaysOnTop(true);
+			}
+			authInFlight = null;
 		}
-	}
+	})();
 
-	if (!token) {
-		dialog.showMessageBoxSync(parentWindow || undefined, {
-			type: 'warning',
-			message: timedOut
-				? 'TimeVault is still waiting for authorisation.'
-				: 'Joplin refused the request.',
-			detail: timedOut
-				? 'No answer came back from Joplin, so nothing was synced. '
-					+ 'Switching the setting off and on again will ask once more.'
-				: 'TimeVault was not granted access, so nothing was synced.',
-			buttons: ['OK'],
-		});
-		return null;
-	}
-
-	saveToken(token, client.port);
-	return client;
+	return authInFlight;
 }
 
 // The database the widget is actually using, which the user can move in
@@ -154,39 +123,19 @@ function databasePath() {
 	return path.join(app.getPath('userData'), 'Events.db3');
 }
 
+// Syncs if it can, and says nothing either way. `interactive` only decides
+// whether authorisation may be requested, not whether anything is displayed:
+// a set-and-forget sync that announces each success is worse than one that
+// stays quiet, and the failures here — Joplin closed, not yet authorised —
+// are all states that fix themselves on the next attempt.
 async function runSync(parentWindow, { interactive = true } = {}) {
 	const client = await connect(parentWindow, { interactive });
 	if (!client) return null;
 
 	const dbPath = databasePath();
-	if (!fs.existsSync(dbPath)) {
-		if (interactive) {
-			dialog.showMessageBoxSync(parentWindow || undefined, {
-				type: 'warning',
-				message: 'No TimeVault data to sync yet.',
-				detail: `Expected a database at:\n${dbPath}`,
-				buttons: ['OK'],
-			});
-		}
-		return null;
-	}
+	if (!fs.existsSync(dbPath)) return null;
 
-	const result = await joplinSync.sync(client, dbPath);
-
-	if (interactive) {
-		dialog.showMessageBoxSync(parentWindow || undefined, {
-			type: 'info',
-			message: 'Synced to Joplin.',
-			detail: `${result.projects} project${result.projects === 1 ? '' : 's'} and `
-				+ `${result.events} entr${result.events === 1 ? 'y' : 'ies'} written to the `
-				+ `"${result.folder}" notebook.\n\n`
-				+ 'This is a one-way sync: those notes are rewritten each time, so any '
-				+ 'changes made in Joplin will be lost.',
-			buttons: ['OK'],
-		});
-	}
-
-	return result;
+	return joplinSync.sync(client, dbPath);
 }
 
 function register() {
@@ -196,18 +145,9 @@ function register() {
 		try {
 			return { ok: true, result: await runSync(win, { interactive }) };
 		} catch (e) {
-			// A background sync fails silently: it was never asked for at
-			// this moment, so a dialog would just be an interruption.
-			if (interactive) {
-				dialog.showMessageBoxSync(win || undefined, {
-					type: 'error',
-					message: 'The Joplin sync failed.',
-					detail: e.message,
-					buttons: ['OK'],
-				});
-			} else {
-				console.warn('[joplin] background sync failed:', e.message);
-			}
+			// Logged, never shown. A sync nobody asked to watch shouldn't
+			// interrupt to report that Joplin was closed.
+			console.warn('[joplin] sync failed:', e.message);
 			return { ok: false, error: e.message };
 		}
 	});

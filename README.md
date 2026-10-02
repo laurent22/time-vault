@@ -58,11 +58,11 @@ It writes a **Time Vault** notebook containing a Summary note and one note per p
 
 After that it is entirely automatic, with no "sync now" command: it syncs at startup, whenever anything in the projects or entries changes, and on quit. Changes are watched at the single point every database write passes through, so nothing is missed, and a burst of them — saving an entry is several statements — collapses into one sync a few seconds later.
 
-The automatic syncs never interrupt: if Joplin isn't running, or authorisation has been revoked, they're skipped silently rather than raising a dialog mid-task. **Reports → Forget Joplin Authorisation** clears the stored token, so switching the setting off and on again will ask for a new one.
+Set and forget: TimeVault never shows a dialog about any of this. If Joplin is closed, or authorisation hasn't been granted yet, the sync is skipped and the next one tries again — those are ordinary states, not errors worth interrupting for. Problems are logged to the console rather than raised. **Reports → Forget Joplin Authorisation** clears the stored token, so switching the setting off and on again will ask for a new one.
 
 The Joplin port is found the same way the Web Clipper finds it, probing ten ports from 41184 for a release build and 27583 for a development one, so it works against either without configuration. A development TimeVault looks for a development Joplin first and a release one for a release Joplin, so running both pairs at once doesn't cross them over; the other range is still tried, so a single running instance is always found.
 
-Joplin asks for authorisation with a dialog **inside its own window**, not a separate alert, so bring Joplin to the front if you can't see it — and note that TimeVault's always-on-top option will otherwise cover it.
+The one piece of interface is Joplin's own: it asks for authorisation **inside its own window**, not as a separate alert, so bring Joplin to the front if you can't see the request. TimeVault drops its always-on-top setting while waiting, so the widget doesn't cover it.
 
 ## How the port works
 

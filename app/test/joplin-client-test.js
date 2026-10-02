@@ -73,6 +73,64 @@ async function check(name, fn) {
 		assert.ok(port === null || Number.isInteger(port), `unexpected result: ${port}`);
 	});
 
+	// --- waitForAuth, against a stub that mimics Joplin's answers ----------
+
+	// A client pointed at a stub server, so these don't need Joplin running.
+	async function withStub(handler, fn) {
+		const http = require('node:http');
+		const server = http.createServer((req, res) => {
+			res.writeHead(200, { 'Content-Type': 'application/json' });
+			res.end(JSON.stringify(handler(req)));
+		});
+		await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+		const { JoplinClient } = require('../src/joplin-client');
+		const client = new JoplinClient(server.address().port, null);
+		try {
+			return await fn(client);
+		} finally {
+			server.close();
+		}
+	}
+
+	await check('a superseded auth token ends the wait quietly', async () => {
+		// Joplin keeps only the newest auth token, so a second POST /auth
+		// invalidates the first and /auth/check answers with an error. That
+		// used to throw, which surfaced as a failure dialog about a second
+		// after the attempt started — while the real prompt was still up.
+		const result = await withStub(
+			() => ({ error: 'Internal Server Error: Invalid auth token: abc' }),
+			(client) => client.waitForAuth('abc', { timeoutMs: 3000, intervalMs: 50 }),
+		);
+		assert.strictEqual(result, null, 'an invalidated token should yield null');
+	});
+
+	await check('a rejected request yields null', async () => {
+		const result = await withStub(
+			() => ({ status: 'rejected' }),
+			(client) => client.waitForAuth('abc', { timeoutMs: 3000, intervalMs: 50 }),
+		);
+		assert.strictEqual(result, null);
+	});
+
+	await check('an accepted request yields the token', async () => {
+		const result = await withStub(
+			() => ({ status: 'accepted', token: 'the-api-token' }),
+			(client) => client.waitForAuth('abc', { timeoutMs: 3000, intervalMs: 50 }),
+		);
+		assert.strictEqual(result, 'the-api-token');
+	});
+
+	await check('nobody answering yields null rather than throwing', async () => {
+		// The timeout has to be an ordinary outcome: the prompt is still
+		// sitting in Joplin and the next sync asks again, so there is nothing
+		// to report.
+		const result = await withStub(
+			() => ({ status: 'waiting' }),
+			(client) => client.waitForAuth('abc', { timeoutMs: 300, intervalMs: 50 }),
+		);
+		assert.strictEqual(result, null);
+	});
+
 	let failed = 0;
 	for (const r of results) {
 		if (r.ok) {
