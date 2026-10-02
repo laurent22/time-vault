@@ -251,3 +251,29 @@ ixCheck('sizing a frame for hit-testing does not make it clip', () => {
 		return 'the hit area should not start clipping the children';
 	}
 });
+
+ixCheck('popupMenu exists and fires the chosen item', () => {
+	// The [+] button, the project name and WidGUI's dropdown lists all call
+	// popupMenu. Without it they silently did nothing — no task menu, and no
+	// way to pick a project in the drawer.
+	if (typeof globalThis.popupMenu !== 'function') return 'popupMenu is not defined';
+});
+
+ixCheck('popupMenu passes the original item to onSelect', () => {
+	// The widget hangs its own properties off menu items (__task, __event,
+	// __project) and reads them back inside the handler, so onSelect has to
+	// run against the original object rather than a serialised copy.
+	const a = new MenuItem();
+	a.title = 'first';
+	const b = new MenuItem();
+	b.title = 'second';
+	b.__marker = 'carried through';
+
+	let seen = null;
+	b.onSelect = function () { seen = this.__marker; };
+
+	// The host bridge is stubbed in the test runner to choose the last item.
+	const index = popupMenu([a, b], 0, 0);
+	if (index !== 1) return `expected the stub to choose index 1, got ${index}`;
+	if (seen !== 'carried through') return `onSelect lost the item's own properties (${seen})`;
+});

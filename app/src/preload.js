@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('tvHost', {
 	form: (items, title, okLabel, cancelLabel) =>
 		ipcRenderer.sendSync('host:form', items, title, okLabel, cancelLabel),
 	alert: (message, buttons) => ipcRenderer.sendSync('host:alert', message, buttons),
+	popupMenu: (items, x, y) => ipcRenderer.sendSync('host:popup-menu', items, x, y),
 	preferences: (groups, title) => ipcRenderer.sendSync('host:preferences', groups, title),
 
 	// --- menu / tray commands ---

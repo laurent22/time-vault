@@ -30,8 +30,18 @@ app.whenReady().then(async () => {
 	// filesystem and preference tests exercise the actual implementation.
 	host.register();
 	sqlHost.register();
-	formHost.register();
 	windowHost.register();
+
+	// Not formHost: its popupMenu would show a real menu and block the run.
+	// Stub it to pick the last item so a test can assert what was chosen.
+	const { ipcMain } = require('electron');
+	ipcMain.on('host:popup-menu', (event, items) => {
+		event.returnValue = items.length ? items.length - 1 : -1;
+	});
+	ipcMain.on('host:form', (event, items) => {
+		event.returnValue = items.map((it) => String(it.defaultValue ?? ''));
+	});
+	ipcMain.on('host:alert', (event) => { event.returnValue = 0; });
 
 	const win = new BrowserWindow({
 		show: false,

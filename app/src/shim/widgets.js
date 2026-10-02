@@ -231,6 +231,34 @@
 		return host.form(plain, title || '', okLabel || 'OK', cancelLabel || 'Cancel');
 	};
 
+	// Konfabulator's popupMenu(items, x, y): shows a context menu and blocks
+	// until something is picked, then fires that item's onSelect. The [+]
+	// button, the project name and WidGUI's dropdowns all go through it.
+	//
+	// onSelect is called on the original MenuItem, not a copy: the widget
+	// hangs its own properties off these (__task, __event, __project) and
+	// reads them back inside the handler.
+	globalThis.popupMenu = function popupMenu(items, x, y) {
+		const list = items || [];
+		if (!host.popupMenu || list.length === 0) return -1;
+
+		// Only the displayable fields can cross IPC.
+		const plain = list.map((it) => ({
+			title: it.title === undefined || it.title === null ? '' : String(it.title),
+			enabled: it.enabled !== false,
+			checked: !!it.checked,
+		}));
+
+		const index = host.popupMenu(plain, x, y);
+		if (index < 0 || index >= list.length) return -1;
+
+		const chosen = list[index];
+		if (chosen && typeof chosen.onSelect === 'function') {
+			chosen.onSelect.call(chosen);
+		}
+		return index;
+	};
+
 	globalThis.alert = function alert(message, ...buttons) {
 		if (!host.alert) {
 			console.warn('[alert]', message);

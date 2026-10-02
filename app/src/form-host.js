@@ -12,7 +12,7 @@
 
 'use strict';
 
-const { ipcMain, BrowserWindow, dialog } = require('electron');
+const { ipcMain, BrowserWindow, dialog, Menu } = require('electron');
 
 function escapeHtml(s) {
 	return String(s)
@@ -144,6 +144,38 @@ function register() {
 
 		const html = buildHtml(items, title, okLabel, cancelLabel);
 		win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+	});
+
+	// Konfabulator's popupMenu(items, x, y): a context menu shown at a point
+	// on screen, blocking until the user picks something. It returns the
+	// index chosen (-1 if dismissed) and the caller fires that item's
+	// onSelect. Used by the [+] button, the project name, and WidGUI's
+	// dropdown lists — all three did nothing without it.
+	ipcMain.on('host:popup-menu', (event, items, x, y) => {
+		const win = BrowserWindow.fromWebContents(event.sender);
+
+		const template = items.map((item, index) => {
+			if (item.title === '-') return { type: 'separator' };
+			return {
+				label: String(item.title === undefined || item.title === null ? '' : item.title),
+				enabled: item.enabled !== false,
+				type: item.checked ? 'checkbox' : 'normal',
+				checked: !!item.checked,
+				click: () => { chosen = index; },
+			};
+		});
+
+		let chosen = -1;
+		const menu = Menu.buildFromTemplate(template);
+
+		// popup() is asynchronous but the renderer is blocked on sendSync, so
+		// the reply is deferred to the callback — the same trick form() uses.
+		menu.popup({
+			window: win || undefined,
+			x: Math.round(Number(x) || 0),
+			y: Math.round(Number(y) || 0),
+			callback: () => { event.returnValue = chosen; },
+		});
 	});
 
 	// Konfabulator's alert(message, ...buttons) is a message box that returns
