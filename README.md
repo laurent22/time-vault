@@ -78,4 +78,4 @@ Deliberate changes, all because Konfabulator provided something Electron doesn't
 
 ## Licence
 
-GPL-2.0-or-later, as the original. Copyright (c) Pogopixels Ltd, 2007–2008.
+GPL-2.0-or-later, as the original. Copyright (c) Laurent Cozic, 2007–2026.

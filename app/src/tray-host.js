@@ -16,23 +16,22 @@ let getWindow = () => null;
 // What the tray shows about the current timer, pushed from the renderer.
 let state = { running: false, project: '', elapsed: '', alwaysOnTop: false };
 
-// Two icons, derived from the original 2008 artwork: hollow when stopped,
-// filled while timing. The original's AutoHotkey tray never did this — it was
-// only a liveness watchdog — but telling the two apart at a glance is the
-// point of a menu-bar item.
+// The original 2008 artwork, dimmed when the timer is stopped and at full
+// strength while it runs. The AutoHotkey tray never changed its icon — it was
+// only a liveness watchdog — but telling the two states apart at a glance is
+// the point of a menu-bar item.
 //
-// Template images: macOS keeps only the alpha and recolours them to suit the
-// menu bar, so they work in both light and dark.
+// Deliberately not template images: a template keeps only the alpha and lets
+// macOS recolour the shape, which flattens this detailed sphere into a plain
+// circle.
 function iconPath(running) {
-	const name = running ? 'TrayIconRunningTemplate.png' : 'TrayIconTemplate.png';
+	const name = running ? 'TrayIconRunning.png' : 'TrayIcon.png';
 	return path.join(__dirname, '..', 'assets', name);
 }
 
 function loadIcon(running) {
 	const image = nativeImage.createFromPath(iconPath(running));
-	if (image.isEmpty()) return null;
-	image.setTemplateImage(true);
-	return image;
+	return image.isEmpty() ? null : image;
 }
 
 function buildMenu() {
