@@ -8,17 +8,24 @@
 
 const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
-
-const APP_DIR = path.join(__dirname, '..');
+const host = require('../src/host');
 
 app.on('window-all-closed', () => {});
 
 app.whenReady().then(async () => {
+	// The shim talks to the same main-process host the real app uses, so the
+	// filesystem and preference tests exercise the actual implementation.
+	host.register();
+
 	const win = new BrowserWindow({
 		show: false,
 		width: 800,
 		height: 600,
-		webPreferences: { contextIsolation: false, nodeIntegration: true },
+		webPreferences: {
+			preload: path.join(__dirname, '..', 'src', 'preload.js'),
+			contextIsolation: true,
+			nodeIntegration: false,
+		},
 	});
 
 	const pageErrors = [];

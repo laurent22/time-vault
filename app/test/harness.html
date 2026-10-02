@@ -2,8 +2,12 @@
 <html>
 <head><meta charset="utf-8"><title>shim tests</title></head>
 <body>
-	<!-- shim -->
+	<!-- shim, in the same order the real app loads it -->
+	<script src="../src/shim/bootstrap.js"></script>
 	<script src="../src/shim/system.js"></script>
+	<script src="../src/shim/filesystem.js"></script>
+	<script src="../src/shim/prefs-schema.js"></script>
+	<script src="../src/shim/preferences.js"></script>
 	<script src="../src/shim/image-sizes.js"></script>
 	<script src="../src/shim/primitives.js"></script>
 
@@ -15,5 +19,6 @@
 	<!-- tests -->
 	<script src="shim-test.js"></script>
 	<script src="integration-test.js"></script>
+	<script src="prefs-test.js"></script>
 </body>
 </html>
