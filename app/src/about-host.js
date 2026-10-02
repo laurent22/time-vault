@@ -47,6 +47,9 @@ function buildHtml(version) {
 
 	// Konfabulator's <shadow hOffset="0" vOffset="1" color="#ffffff"/>.
 	const shadow = 'text-shadow: 0 1px 0 #ffffff;';
+	// The copyright range runs to whenever the app is being used, so it
+	// doesn't quietly go stale.
+	const currentYear = new Date().getFullYear();
 
 	return `<!doctype html>
 <html><head><meta charset="utf-8"><title>About TimeVault</title><style>
@@ -71,7 +74,7 @@ function buildHtml(version) {
 	<div class="t" style="left:119px; top:72px; font-size:14px; font-weight:bold; color:#222222; ${shadow}">Version</div>
 	<div class="t" style="left:174px; top:72px; font-size:14px; font-weight:bold; color:#222222;">${version}</div>
 
-	<div class="t" style="left:0; top:148px; width:${WIDTH}px; text-align:center; font-size:11px; color:#222222; ${shadow}">Copyright (c) Laurent Cozic, 2007, 2026</div>
+	<div class="t" style="left:0; top:148px; width:${WIDTH}px; text-align:center; font-size:11px; color:#222222; ${shadow}">Copyright &copy; Laurent Cozic, 2007-${currentYear}</div>
 
 	<script>
 		const { ipcRenderer } = require('electron');
