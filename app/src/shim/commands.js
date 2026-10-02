@@ -10,6 +10,15 @@
 (function () {
 	const host = globalThis.tvHost || {};
 
+	// The zoom shim owns the preset list; this just walks it.
+	function nextZoom(direction) {
+		const levels = globalThis.konZoomLevels ? globalThis.konZoomLevels() : [1];
+		const now = globalThis.konZoom ? globalThis.konZoom() : 1;
+		let i = levels.findIndex((l) => Math.abs(l - now) < 0.001);
+		if (i === -1) i = 0;
+		return levels[Math.min(levels.length - 1, Math.max(0, i + direction))];
+	}
+
 	function withWindow(fn) {
 		// gMainWindow only exists once the widget scripts have run.
 		const w = globalThis.gMainWindow;
@@ -42,6 +51,10 @@
 
 		// A widget dragged off-screen, or onto a display that's since been
 		// disconnected, would otherwise be unreachable.
+		'menu:zoom-in': () => globalThis.konSetZoom(nextZoom(1)),
+		'menu:zoom-out': () => globalThis.konSetZoom(nextZoom(-1)),
+		'menu:zoom-reset': () => globalThis.konSetZoom(1),
+
 		'menu:reset-position': () => {
 			if (host.setPosition) host.setPosition(60, 60);
 			if (globalThis.preferences) globalThis.preferences.windowLocation.value = '60,60';

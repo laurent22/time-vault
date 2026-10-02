@@ -1,4 +1,4 @@
-# TimeVault
+# Time Vault
 
 A desktop time tracker: click play when you start a task, click it again when you finish.
 
@@ -46,6 +46,7 @@ npm run test:app  # tests that boot the whole widget
 | **Reports, always-on-top** | right-click the widget |
 | **Move it** | drag any part of the skin |
 | **Resize it** | drag the round button on the right |
+| **Zoom** | `Cmd-+` / `Cmd--` / `Cmd-0`, or right-click the widget |
 
 Your data lives in `~/Library/Application Support/TimeVault` on macOS — `Events.db3` is a plain SQLite file, and CSV reports are written beside it. Databases from the original widget open unchanged.
 
@@ -75,6 +76,7 @@ Deliberate changes, all because Konfabulator provided something Electron doesn't
 - **The tray icon** is Electron's, replacing a Windows-only AutoHotkey executable. It now also shows whether the timer is running — the original's was a liveness watchdog that never changed.
 - **Always on top** is a new preference, off by default, on the widget's right-click menu. Konfabulator floated widgets and offered the choice in its own menu, so the widget never had one.
 - **Preferences** render in their own window rather than the engine's, built from the same declarations in the original `.kon` manifest.
+- **Zoom** is new. The widget is 1x artwork at fixed pixel coordinates, which is small on a modern display; scaling the stage magnifies everything while the layout code carries on in the original coordinates. The artwork is bitmap, so it interpolates — the PSDs are in the repo if sharper assets are ever wanted.
 
 ## Licence
 

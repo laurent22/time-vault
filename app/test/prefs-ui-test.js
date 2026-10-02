@@ -71,3 +71,50 @@ puCheck('onWillChangePreferences populates the popup option lists', () => {
 		return 'option and optionValue lengths disagree';
 	}
 });
+
+puCheck('zoom scales the stage without touching the layout', () => {
+	// The widget keeps working in its original 1x coordinates; only the
+	// final composite is scaled, so nothing in the ported code has to know.
+	if (typeof konSetZoom !== 'function') return 'konSetZoom is not exposed';
+
+	const stage = document.getElementById('stage');
+	const before = konZoom();
+
+	konSetZoom(2);
+	const transform = stage.style.transform;
+	const origin = stage.style.transformOrigin;
+
+	konSetZoom(before);
+
+	if (!/scale\(2\)/.test(transform)) return `transform is ${JSON.stringify(transform)}`;
+	// Top-left, so the widget grows down and right rather than drifting.
+	if (!/^0(px)? 0(px)?$/.test(origin)) return `transform-origin is ${JSON.stringify(origin)}`;
+});
+
+puCheck('zoom clamps to the available levels', () => {
+	if (typeof konSetZoom !== 'function') return 'konSetZoom is not exposed';
+	const levels = konZoomLevels();
+	const before = konZoom();
+
+	konSetZoom(99);
+	const high = konZoom();
+	konSetZoom(0.01);
+	const low = konZoom();
+	konSetZoom(before);
+
+	if (high !== levels[levels.length - 1]) return `clamped high to ${high}`;
+	if (low !== levels[0]) return `clamped low to ${low}`;
+});
+
+puCheck('zoom at 1x leaves no transform behind', () => {
+	// A leftover scale(1) would still create a containing block, which
+	// changes how fixed-position descendants resolve.
+	if (typeof konSetZoom !== 'function') return 'konSetZoom is not exposed';
+	const stage = document.getElementById('stage');
+	const before = konZoom();
+	konSetZoom(2);
+	konSetZoom(1);
+	const transform = stage.style.transform;
+	konSetZoom(before);
+	if (transform !== '') return `expected no transform, got ${JSON.stringify(transform)}`;
+});

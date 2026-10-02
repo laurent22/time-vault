@@ -53,6 +53,10 @@ function install(getWindow) {
 		{
 			label: 'Window',
 			submenu: [
+				{ label: 'Zoom In', accelerator: 'CmdOrCtrl+Plus', click: send('menu:zoom-in') },
+				{ label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: send('menu:zoom-out') },
+				{ label: 'Actual Size', accelerator: 'CmdOrCtrl+0', click: send('menu:zoom-reset') },
+				{ type: 'separator' },
 				{ label: 'Reset Position', click: send('menu:reset-position') },
 				{ type: 'separator' },
 				{ role: 'minimize' },

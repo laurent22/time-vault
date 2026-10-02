@@ -164,3 +164,4 @@
 "editProject_projectNotesDescription" = "Le budget de temps, tarif à l'heure et notes sont optionnels.";
 
 "mainWindow_ctxMenu_alwaysOnTop" = "Toujours au premier plan";
+"mainWindow_ctxMenu_zoom" = "Zoom";
