@@ -1,0 +1,85 @@
+// Connects the menu bar and tray to the widget.
+//
+// Konfabulator had no menus — the widget was driven entirely by clicking its
+// own artwork and its context menu. A frameless Electron window needs real
+// menu commands to be reachable at all, and they're routed to the same
+// methods the skin's buttons call so there's one code path, not two.
+
+'use strict';
+
+(function () {
+	const host = globalThis.tvHost || {};
+
+	function withWindow(fn) {
+		// gMainWindow only exists once the widget scripts have run.
+		const w = globalThis.gMainWindow;
+		if (!w) {
+			console.warn('[commands] the widget is not ready yet');
+			return;
+		}
+		try {
+			fn(w);
+		} catch (e) {
+			console.error('[commands] failed:', e.message);
+		}
+	}
+
+	const handlers = {
+		'menu:preferences': () => globalThis.konShowPreferences(),
+		'tray:preferences': () => globalThis.konShowPreferences(),
+
+		'menu:toggle-timer': () => withWindow((w) => w.toggleEventTimer()),
+		'tray:toggle-timer': () => withWindow((w) => w.toggleEventTimer()),
+
+		'menu:toggle-drawer': () => withWindow((w) => w.expandButton_clicked()),
+
+		'menu:publish-reports': () => {
+			if (globalThis.Main && typeof Main.publishProjects === 'function') Main.publishProjects();
+		},
+		'menu:reveal-reports': () => {
+			if (globalThis.Main && typeof Main.revealReportFolder === 'function') Main.revealReportFolder();
+		},
+
+		// A widget dragged off-screen, or onto a display that's since been
+		// disconnected, would otherwise be unreachable.
+		'menu:reset-position': () => {
+			if (host.setPosition) host.setPosition(60, 60);
+			if (globalThis.preferences) globalThis.preferences.windowLocation.value = '60,60';
+		},
+	};
+
+	if (host.onCommand) {
+		host.onCommand((channel) => {
+			const fn = handlers[channel];
+			if (fn) fn();
+			else console.warn('[commands] unknown command:', channel);
+		});
+	}
+
+	// --- tray state ---------------------------------------------------------
+	// The tray shows the running project and elapsed time, so it needs
+	// telling whenever those change. The widget has no hook for it, so this
+	// samples instead — cheap, and the tray menu only renders when opened.
+
+	let last = '';
+
+	function pushTrayState() {
+		const w = globalThis.gMainWindow;
+		if (!w || !host.setTrayState) return;
+
+		const running = w.projectEvent != undefined;
+		const elapsed = running ? String(w.eventTimeText ? w.eventTimeText.data : '') : '';
+		const project = w.projectNameText ? String(w.projectNameText.data) : '';
+
+		const key = `${running}|${elapsed}|${project}`;
+		if (key === last) return;
+		last = key;
+
+		host.setTrayState({ running, elapsed, project });
+	}
+
+	document.addEventListener('kon-widget-ready', () => {
+		pushTrayState();
+		setInterval(pushTrayState, 1000);
+	});
+})();

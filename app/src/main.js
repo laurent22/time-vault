@@ -11,6 +11,9 @@ const host = require('./host');
 const sqlHost = require('./sql-host');
 const formHost = require('./form-host');
 const windowHost = require('./window-host');
+const prefsHost = require('./prefs-host');
+const trayHost = require('./tray-host');
+const menu = require('./menu');
 
 // The original skin is 1x artwork laid out in absolute pixel coordinates, so
 // the window starts at a size big enough for the default layout. MainWindow.js
@@ -53,7 +56,12 @@ app.whenReady().then(() => {
 	sqlHost.register();
 	formHost.register();
 	windowHost.register();
+	prefsHost.register();
+	trayHost.register();
 	createWindow();
+
+	trayHost.create(() => mainWindow);
+	menu.install(() => mainWindow);
 
 	app.on('activate', () => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow();

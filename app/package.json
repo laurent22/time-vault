@@ -7,7 +7,13 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "electron test/run-tests.js"
+    "test": "electron test/run-tests.js && electron test/run-app-tests.js",
+    "test:shim": "electron test/run-tests.js",
+    "test:app": "electron test/run-app-tests.js",
+    "boot-check": "electron test/boot-check.js",
+    "layout": "electron test/layout-probe.js",
+    "interaction": "electron test/interaction-probe.js",
+    "gen": "electron tools/gen-tray-icon.js && node tools/gen-image-sizes.js && node tools/gen-prefs-schema.js"
   },
   "devDependencies": {
     "electron": "39.0.0"

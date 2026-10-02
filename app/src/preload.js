@@ -28,6 +28,22 @@ contextBridge.exposeInMainWorld('tvHost', {
 	form: (items, title, okLabel, cancelLabel) =>
 		ipcRenderer.sendSync('host:form', items, title, okLabel, cancelLabel),
 	alert: (message, buttons) => ipcRenderer.sendSync('host:alert', message, buttons),
+	preferences: (groups, title) => ipcRenderer.sendSync('host:preferences', groups, title),
+
+	// --- menu / tray commands ---
+	onCommand: (callback) => {
+		const channels = [
+			'menu:preferences', 'menu:toggle-timer', 'menu:toggle-drawer',
+			'menu:publish-reports', 'menu:reveal-reports', 'menu:reset-position',
+			'tray:preferences', 'tray:toggle-timer',
+		];
+		// Only the channel name is forwarded — never the event, which would
+		// hand the renderer a way to reach the main process directly.
+		for (const channel of channels) {
+			ipcRenderer.on(channel, () => callback(channel));
+		}
+	},
+	setTrayState: (state) => ipcRenderer.send('host:tray-state', state),
 
 	// --- preferences ---
 	loadPreferences: () => ipcRenderer.sendSync('host:load-preferences'),
