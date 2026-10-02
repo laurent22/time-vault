@@ -6,14 +6,15 @@
   "license": "GPL-2.0-or-later",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron .",
-    "test": "electron test/run-tests.js && electron test/run-app-tests.js",
-    "test:shim": "electron test/run-tests.js",
-    "test:app": "electron test/run-app-tests.js",
-    "boot-check": "electron test/boot-check.js",
-    "layout": "electron test/layout-probe.js",
-    "interaction": "electron test/interaction-probe.js",
-    "gen": "electron tools/gen-tray-icon.js && node tools/gen-image-sizes.js && node tools/gen-prefs-schema.js"
+    "//": "env -u ELECTRON_RUN_AS_NODE: VS Code's terminal exports it, which makes Electron run as plain Node and leaves every Electron API undefined.",
+    "start": "env -u ELECTRON_RUN_AS_NODE electron .",
+    "test": "npm run test:shim && npm run test:app",
+    "test:shim": "env -u ELECTRON_RUN_AS_NODE electron test/run-tests.js",
+    "test:app": "env -u ELECTRON_RUN_AS_NODE electron test/run-app-tests.js",
+    "boot-check": "env -u ELECTRON_RUN_AS_NODE electron test/boot-check.js",
+    "layout": "env -u ELECTRON_RUN_AS_NODE electron test/layout-probe.js",
+    "interaction": "env -u ELECTRON_RUN_AS_NODE electron test/interaction-probe.js",
+    "gen": "env -u ELECTRON_RUN_AS_NODE electron tools/gen-tray-icon.js && node tools/gen-image-sizes.js && node tools/gen-prefs-schema.js"
   },
   "devDependencies": {
     "electron": "39.0.0"

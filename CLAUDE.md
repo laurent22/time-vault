@@ -28,10 +28,11 @@ npm start        # run the app
 npm test         # headless test suite
 ```
 
-**If Electron exits with `Cannot read properties of undefined (reading 'on')`,
-your shell has `ELECTRON_RUN_AS_NODE=1` set** — VS Code's integrated terminal
-exports it. Electron then runs as plain Node and every Electron API is
-undefined. Prefix with `env -u ELECTRON_RUN_AS_NODE`.
+Every script clears `ELECTRON_RUN_AS_NODE` first, because VS Code's integrated
+terminal exports it and Electron then runs as plain Node with every Electron
+API undefined — the symptom is `Cannot read properties of undefined (reading
+'on')`. Invoking `electron` directly rather than through npm needs
+`env -u ELECTRON_RUN_AS_NODE` in front of it.
 
 Electron is pinned to an exact version so the postinstall resolves from the
 local `~/Library/Caches/electron` rather than downloading from GitHub.
