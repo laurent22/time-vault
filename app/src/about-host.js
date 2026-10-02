@@ -4,8 +4,10 @@
 // a background image with text positioned over it. The engine supplied the
 // window; the widget only described what went in it.
 //
-// Positions, sizes, colours and shadows below are taken verbatim from
-// Contents/Time Vault.kon, so the title and version sit where they did.
+// Sizes, colours and shadows are taken verbatim from Contents/Time Vault.kon.
+// The title and version rows are nudged from their original coordinates to
+// sit better now the lower strip is empty: the title moved right 4px and down
+// 8px, and the version tucked up directly beneath it.
 //
 // The Pogopixels branding is gone — the logo painted out of the artwork by
 // tools/gen-about-image.js, and the links with it — since the port isn't a
@@ -64,10 +66,10 @@ function buildHtml(version) {
 <body>
 	<div id="bg"></div>
 
-	<div class="t" style="left:115px; top:46px; font-size:20px; font-weight:bold; ${shadow}">Time Vault</div>
+	<div class="t" style="left:119px; top:54px; font-size:20px; font-weight:bold; ${shadow}">Time Vault</div>
 
-	<div class="t" style="left:115px; top:90px; font-size:14px; font-weight:bold; color:#222222; ${shadow}">Version</div>
-	<div class="t" style="left:170px; top:90px; font-size:14px; font-weight:bold; color:#222222;">${version}</div>
+	<div class="t" style="left:119px; top:72px; font-size:14px; font-weight:bold; color:#222222; ${shadow}">Version</div>
+	<div class="t" style="left:174px; top:72px; font-size:14px; font-weight:bold; color:#222222;">${version}</div>
 
 	<div class="t" style="left:0; top:148px; width:${WIDTH}px; text-align:center; font-size:11px; color:#222222; ${shadow}">Copyright (c) Laurent Cozic, 2007, 2026</div>
 
