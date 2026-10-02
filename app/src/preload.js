@@ -18,6 +18,9 @@ contextBridge.exposeInMainWorld('tvHost', {
 	// --- filesystem (sync) ---
 	fs: (method, ...args) => ipcRenderer.sendSync('host:fs', method, ...args),
 
+	// --- sqlite (sync) ---
+	sql: (method, ...args) => ipcRenderer.sendSync('host:sql', method, ...args),
+
 	// --- preferences ---
 	loadPreferences: () => ipcRenderer.sendSync('host:load-preferences'),
 	savePreferences: (values) => ipcRenderer.send('host:save-preferences', values),

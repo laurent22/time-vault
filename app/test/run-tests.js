@@ -8,7 +8,9 @@
 
 const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs');
 const host = require('../src/host');
+const sqlHost = require('../src/sql-host');
 
 app.on('window-all-closed', () => {});
 
@@ -16,6 +18,7 @@ app.whenReady().then(async () => {
 	// The shim talks to the same main-process host the real app uses, so the
 	// filesystem and preference tests exercise the actual implementation.
 	host.register();
+	sqlHost.register();
 
 	const win = new BrowserWindow({
 		show: false,
@@ -33,7 +36,18 @@ app.whenReady().then(async () => {
 		if (e.level === 'error') pageErrors.push(e.message);
 	});
 
-	await win.loadFile(path.join(__dirname, 'harness.html'));
+	// Work on a copy of the fixture: SQLite can write a journal beside the
+	// file, and the committed 2007 database should stay pristine.
+	const fixtureSrc = path.join(__dirname, 'fixtures', 'Events.db3');
+	const fixtureCopy = path.join(app.getPath('userData'), 'test-Events.db3');
+	fs.mkdirSync(path.dirname(fixtureCopy), { recursive: true });
+	fs.copyFileSync(fixtureSrc, fixtureCopy);
+
+	// Passed as a query parameter so it's available before the page's own
+	// scripts run, rather than injected after they've already executed.
+	await win.loadFile(path.join(__dirname, 'harness.html'), {
+		query: { fixtureDb: fixtureCopy },
+	});
 
 	// Serialise in the page: results can reference DOM-adjacent values that
 	// aren't structured-cloneable across the IPC boundary.

@@ -8,6 +8,7 @@
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('node:path');
 const host = require('./host');
+const sqlHost = require('./sql-host');
 
 // The original skin is 1x artwork laid out in absolute pixel coordinates, so
 // the window starts at a size big enough for the default layout. MainWindow.js
@@ -76,6 +77,7 @@ ipcMain.handle('screen:get-work-area', () => {
 
 app.whenReady().then(() => {
 	host.register();
+	sqlHost.register();
 	createWindow();
 
 	app.on('activate', () => {
@@ -85,4 +87,9 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
 	if (process.platform !== 'darwin') app.quit();
+});
+
+// Close databases cleanly so SQLite doesn't leave a stale -journal behind.
+app.on('will-quit', () => {
+	sqlHost.closeAll();
 });
