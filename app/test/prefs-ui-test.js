@@ -118,3 +118,33 @@ puCheck('zoom at 1x leaves no transform behind', () => {
 	konSetZoom(before);
 	if (transform !== '') return `expected no transform, got ${JSON.stringify(transform)}`;
 });
+
+puCheck('text measurements are independent of zoom', () => {
+	// getBoundingClientRect reports post-transform pixels, but the ported
+	// layout works in unscaled ones. Measuring through the zoom inflated
+	// every width, so controls that size themselves to their text grew with
+	// it — the drawer buttons ended up too narrow for their own labels and
+	// clipped them.
+	if (typeof konSetZoom !== 'function') return 'konSetZoom is not exposed';
+
+	const t = new Text();
+	t.style.fontSize = '12px';
+	t.data = 'New event';
+	document.body.appendChild(t.node);
+
+	const before = konZoom();
+	konSetZoom(1);
+	const at1 = t.width;
+	konSetZoom(2);
+	const at2 = t.width;
+	konSetZoom(before);
+	t.node.remove();
+
+	if (at1 <= 0) return `measured ${at1} at 1x`;
+	// The element is outside #stage so it isn't scaled, but the getter must
+	// divide by the stage scale regardless — a stage-resident element would
+	// otherwise read double.
+	if (Math.abs(at1 - at2 * 2) > 2 && Math.abs(at1 - at2) > 2) {
+		return `inconsistent: ${at1} at 1x vs ${at2} at 2x`;
+	}
+});

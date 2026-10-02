@@ -702,7 +702,7 @@ class Text extends KonObject {
 	get width() {
 		if (this._width != null) return this._width;
 		const rect = this.node.getBoundingClientRect();
-		if (rect.width > 0) return Math.ceil(rect.width);
+		if (rect.width > 0) return Math.ceil(rect.width / stageScale());
 		return measureText(this.node).width;
 	}
 	set width(v) {
@@ -729,7 +729,8 @@ class Text extends KonObject {
 		// so a few stray pixels aren't a real line — fall through to the
 		// line-height measurement below, which is what MainDrawer's empty
 		// Description column needs.
-		if (rect.height > 4) return Math.ceil(rect.height);
+		const unscaled = rect.height / stageScale();
+		if (unscaled > 4) return Math.ceil(unscaled);
 
 		const measured = measureText(this.node).height;
 		if (measured > 4) return measured;
@@ -778,6 +779,21 @@ class Canvas extends KonObject {
 	clear() {
 		this.getContext('2d').clearRect(0, 0, this.node.width, this.node.height);
 	}
+}
+
+// The zoom factor applied to the stage. getBoundingClientRect() reports
+// post-transform pixels, but the ported layout works in unscaled ones — so
+// every measurement taken from the live DOM has to be divided back down.
+// Without this, zooming inflated every measured width and the controls that
+// size themselves to their text grew with it.
+function stageScale() {
+	const stage = document.getElementById('stage');
+	if (!stage) return 1;
+	const t = stage.style.transform;
+	if (!t) return 1;
+	const m = /scale\(([^)]+)\)/.exec(t);
+	const v = m ? parseFloat(m[1]) : 1;
+	return Number.isFinite(v) && v > 0 ? v : 1;
 }
 
 // --- text measurement -----------------------------------------------------
