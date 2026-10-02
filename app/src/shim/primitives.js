@@ -577,7 +577,9 @@ class Text extends KonObject {
 	// measure text before deciding whether to truncate it.
 	get width() {
 		if (this._width != null) return this._width;
-		return Math.ceil(this.node.getBoundingClientRect().width);
+		const rect = this.node.getBoundingClientRect();
+		if (rect.width > 0) return Math.ceil(rect.width);
+		return measureText(this.node).width;
 	}
 	set width(v) {
 		this._width = v == null ? null : Number(v);
@@ -592,7 +594,25 @@ class Text extends KonObject {
 		}
 	}
 
-	get height() { return Math.ceil(this.node.getBoundingClientRect().height); }
+	// Konfabulator could measure text that wasn't on screen; the DOM reports
+	// zero for a detached element. The layout runs during construction,
+	// before anything is in the document, and MainDrawer advances its row
+	// cursor by each label's height — so zero here stacked the list on top
+	// of the buttons below it.
+	get height() {
+		const rect = this.node.getBoundingClientRect();
+		if (rect.height > 0) return Math.ceil(rect.height);
+
+		const measured = measureText(this.node).height;
+		if (measured > 0) return measured;
+
+		// An empty string collapses to nothing in the DOM, but Konfabulator
+		// still reported a line's height. MainDrawer advances its row cursor
+		// by each label's height, and the Description column is empty for
+		// most rows — zero there left the divider and buttons stacked on top
+		// of the list.
+		return measureLineHeight(this.node);
+	}
 }
 
 // --- Canvas ---------------------------------------------------------------
@@ -630,6 +650,71 @@ class Canvas extends KonObject {
 	clear() {
 		this.getContext('2d').clearRect(0, 0, this.node.width, this.node.height);
 	}
+}
+
+// --- text measurement -----------------------------------------------------
+// Konfabulator reported text metrics whether or not the element was on
+// screen; the DOM reports zero for anything detached. The ported layout runs
+// during construction, before any of it is in the document, so measurements
+// are taken against a hidden host instead.
+
+let measureHost = null;
+
+function getMeasureHost() {
+	if (!document.body) return null;
+	if (!measureHost) {
+		measureHost = document.createElement('div');
+		measureHost.style.cssText =
+			'position:absolute; left:-10000px; top:-10000px; visibility:hidden; pointer-events:none;';
+		document.body.appendChild(measureHost);
+	}
+	return measureHost;
+}
+
+// The size this text would occupy if it were on screen.
+function measureText(node) {
+	const host = getMeasureHost();
+	if (!host) return { width: 0, height: 0 };
+
+	const clone = node.cloneNode(true);
+	// Size to content, rather than inheriting the original's absolute
+	// placement.
+	clone.style.position = 'static';
+	clone.style.left = '';
+	clone.style.top = '';
+	clone.style.visibility = 'visible';
+	if (!node.style.width) clone.style.width = 'max-content';
+
+	host.appendChild(clone);
+	const rect = clone.getBoundingClientRect();
+	host.removeChild(clone);
+
+	return { width: Math.ceil(rect.width), height: Math.ceil(rect.height) };
+}
+
+// The height of one line in this element's font. An empty string collapses
+// to nothing in the DOM, but Konfabulator still reported a line's height —
+// and MainDrawer advances its row cursor by each label's height, so an empty
+// Description column would otherwise contribute zero and stack the buttons
+// on top of the list.
+function measureLineHeight(node) {
+	const host = getMeasureHost();
+	if (!host) return 0;
+
+	const probe = document.createElement('div');
+	probe.style.cssText = node.style.cssText;
+	probe.style.position = 'static';
+	probe.style.left = '';
+	probe.style.top = '';
+	probe.style.width = 'max-content';
+	probe.style.visibility = 'visible';
+	// A non-breaking space gives the line box without visible content.
+	probe.textContent = '\u00a0';
+
+	host.appendChild(probe);
+	const h = Math.ceil(probe.getBoundingClientRect().height);
+	host.removeChild(probe);
+	return h;
 }
 
 // --- canvas context -------------------------------------------------------

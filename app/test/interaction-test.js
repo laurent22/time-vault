@@ -311,3 +311,34 @@ ixCheck('a partly sized frame only clips the axis it was given', () => {
 		return 'a half-sized frame should not clip';
 	}
 });
+
+ixCheck('an empty text still reports a line height', () => {
+	// MainDrawer advances its row cursor by each label's height. The
+	// Description column is empty for most rows, and an empty string
+	// collapses to zero in the DOM — which left the divider and the
+	// Nouvelle tache / Tout supprimer buttons stacked on top of the list.
+	const t = new Text();
+	t.style.fontSize = '12px';
+	t.data = '';
+	document.body.appendChild(t.node);
+	const empty = t.height;
+	t.data = 'x';
+	const filled = t.height;
+	t.node.remove();
+
+	if (!(empty > 0)) return `an empty text reported height ${empty}`;
+	if (Math.abs(empty - filled) > 4) {
+		return `empty (${empty}) should be about one line, like filled (${filled})`;
+	}
+});
+
+ixCheck('text measures correctly while off-document', () => {
+	// The ported layout runs during construction, before anything is in the
+	// document, and the DOM reports zero for a detached element.
+	const t = new Text();
+	t.style.fontSize = '22px';
+	t.data = '00:00:00';
+	// Deliberately not appended anywhere.
+	if (!(t.height > 0)) return `detached height was ${t.height}`;
+	if (!(t.width > 0)) return `detached width was ${t.width}`;
+});
