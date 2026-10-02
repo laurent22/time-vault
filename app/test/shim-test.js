@@ -140,6 +140,21 @@ check('Image explicit size overrides the natural one', () => {
 		|| eq(img.node.style.width, '300px', 'css width');
 });
 
+check('Image axes scale independently, without aspect-ratio lock', () => {
+	// The 3-piece backgrounds stretch a 1px-wide slice horizontally and
+	// expect its height to stay put. An <img> given only a CSS width keeps
+	// its aspect ratio, which made these slices thousands of pixels tall.
+	const img = new Image();
+	img.src = 'Resources/Skin/Default/BackgroundRight_Middle.png'; // 1x89
+	img.width = 97;
+	document.body.appendChild(img.node);
+	const r = img.node.getBoundingClientRect();
+	img.node.remove();
+
+	return eq(Math.round(r.width), 97, 'rendered width')
+		|| eq(Math.round(r.height), 89, 'rendered height should stay at the natural 89');
+});
+
 check('Image with an unknown path falls back without throwing', () => {
 	const img = new Image();
 	img.src = 'Resources/Skin/Default/DoesNotExist.png';

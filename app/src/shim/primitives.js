@@ -238,6 +238,9 @@ class Image extends KonObject {
 		this._src = v == null ? '' : String(v);
 		this.node.src = resolveResource(this._src);
 		this._natural = lookupImageSize(this._src);
+		// A size set before src was assigned was sized against the wrong
+		// natural dimensions.
+		this._applySize();
 	}
 
 	// Konfabulator reports the natural size as soon as src is set, because it
@@ -253,7 +256,7 @@ class Image extends KonObject {
 	}
 	set width(v) {
 		this._width = v == null ? null : Number(v);
-		this.node.style.width = this._width == null ? '' : `${this._width}px`;
+		this._applySize();
 	}
 
 	get height() {
@@ -263,7 +266,28 @@ class Image extends KonObject {
 	}
 	set height(v) {
 		this._height = v == null ? null : Number(v);
-		this.node.style.height = this._height == null ? '' : `${this._height}px`;
+		this._applySize();
+	}
+
+	// Konfabulator scaled each axis independently: setting only the width of
+	// a 1px-wide slice stretched it horizontally and left its height alone.
+	// An <img> with a single CSS dimension preserves its aspect ratio
+	// instead, which turned the 1px middle slices of the 3-piece backgrounds
+	// into thousands of pixels tall. So whenever one axis is set explicitly,
+	// the other is pinned to its natural size.
+	_applySize() {
+		const natural = this._natural || [this.node.naturalWidth, this.node.naturalHeight];
+
+		if (this._width == null && this._height == null) {
+			this.node.style.width = '';
+			this.node.style.height = '';
+			return;
+		}
+
+		const w = this._width != null ? this._width : natural[0];
+		const h = this._height != null ? this._height : natural[1];
+		this.node.style.width = `${w}px`;
+		this.node.style.height = `${h}px`;
 	}
 }
 

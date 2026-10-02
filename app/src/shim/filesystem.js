@@ -56,7 +56,14 @@
 		isDirectory: (p) => fsCall('isDirectory', p),
 		createDirectory: (p) => fsCall('createDirectory', p),
 		getDirectoryContents: (p) => fsCall('getDirectoryContents', p) || [],
-		readFile: (p) => fsCall('readFile', p),
+		// Konfabulator's second argument asks for an array of lines rather
+		// than one string; Localization.js relies on it to read the
+		// .strings files.
+		readFile: (p, asLines) => {
+			const text = fsCall('readFile', p);
+			if (text === undefined || text === null) return asLines ? [] : undefined;
+			return asLines ? String(text).split(/\r\n|\r|\n/) : text;
+		},
 		writeFile: (p, data) => fsCall('writeFile', p, data),
 		remove: (p) => fsCall('remove', p),
 		copy: (from, to) => fsCall('copy', from, to),
