@@ -51,6 +51,9 @@
 
 		// A widget dragged off-screen, or onto a display that's since been
 		// disconnected, would otherwise be unreachable.
+		'menu:joplin-sync': () => { if (host.joplinSync) host.joplinSync(); },
+		'menu:joplin-forget': () => { if (host.joplinForget) host.joplinForget(); },
+
 		'menu:about': () => { if (host.showAbout) host.showAbout(); },
 		'tray:about': () => { if (host.showAbout) host.showAbout(); },
 

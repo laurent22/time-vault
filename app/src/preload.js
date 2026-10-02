@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('tvHost', {
 			'menu:preferences', 'menu:toggle-timer', 'menu:toggle-drawer',
 			'menu:publish-reports', 'menu:reveal-reports', 'menu:reset-position',
 			'menu:zoom-in', 'menu:zoom-out', 'menu:zoom-reset',
+			'menu:joplin-sync', 'menu:joplin-forget',
 			'tray:preferences', 'tray:toggle-timer',
 		];
 		// Only the channel name is forwarded — never the event, which would
@@ -47,6 +48,11 @@ contextBridge.exposeInMainWorld('tvHost', {
 	},
 	setTrayState: (state) => ipcRenderer.send('host:tray-state', state),
 	showAbout: () => ipcRenderer.send('host:show-about'),
+
+	// --- Joplin ---
+	joplinSync: () => ipcRenderer.invoke('joplin:sync'),
+	joplinForget: () => ipcRenderer.invoke('joplin:forget'),
+	joplinStatus: () => ipcRenderer.invoke('joplin:status'),
 	setAlwaysOnTop: (on) => ipcRenderer.send('window:set-always-on-top', on),
 	onAlwaysOnTop: (callback) => {
 		ipcRenderer.on('tray:set-always-on-top', (_event, on) => callback(!!on));

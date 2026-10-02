@@ -50,6 +50,9 @@ function install(getWindow) {
 			submenu: [
 				{ label: 'Publish Reports Now', click: send('menu:publish-reports') },
 				{ label: 'Reveal Report Folder', click: send('menu:reveal-reports') },
+				{ type: 'separator' },
+				{ label: 'Sync to Joplin', click: send('menu:joplin-sync') },
+				{ label: 'Forget Joplin Authorisation', click: send('menu:joplin-forget') },
 			],
 		},
 		{

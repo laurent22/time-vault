@@ -178,3 +178,4 @@
 "mainWindow_ctxMenu_alwaysOnTop" = "Always on top";
 "mainWindow_ctxMenu_zoom" = "Zoom";
 "mainWindow_ctxMenu_about" = "About TimeVault";
+"mainWindow_ctxMenu_syncJoplin" = "Sync to Joplin";

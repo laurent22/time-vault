@@ -15,6 +15,7 @@ const prefsHost = require('./prefs-host');
 const trayHost = require('./tray-host');
 const menu = require('./menu');
 const aboutHost = require('./about-host');
+const joplinHost = require('./joplin-host');
 
 // The original skin is 1x artwork laid out in absolute pixel coordinates, so
 // the window starts at a size big enough for the default layout. MainWindow.js
@@ -62,6 +63,7 @@ app.whenReady().then(() => {
 	prefsHost.register();
 	trayHost.register();
 	aboutHost.register();
+	joplinHost.register();
 	createWindow();
 
 	trayHost.create(() => mainWindow);
