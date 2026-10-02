@@ -140,6 +140,31 @@ descendant can set it back to `visible`, which Konfabulator never allowed —
 the drawer's dropdown kept painting below the collapsed widget. Hidden
 elements keep their box, because layout code reads offsets off them.
 
+**`alert()` returns a 1-based button index.** Konfabulator numbered from 1 and
+the widget depends on it — `if (answer == 2) return;` is how Delete All
+cancels. Returning Electron's 0-based index made "No" read as 1 and deleted
+everything anyway.
+
+**Context menus are two-sided.** `onContextMenu` fills in `contextMenuItems`
+and the engine shows that menu once the handler returns. Storing the array
+without showing it leaves right-click dead everywhere.
+
+**`orderAbove(null)` means "bring to front".** WidGUI uses it to lift a
+button's label above the background it just drew; ignoring a null sibling
+leaves every label painted underneath its own artwork.
+
+**Text must measure off-document, and an empty string still has a line
+height.** The ported layout runs during construction, before anything is in
+the document, and `MainDrawer` advances its row cursor by each label's
+height — including the usually-empty Description column.
+
+**A frame sized on one axis takes the other from its content.** WidGUI sets a
+width and lets the height follow; absolutely positioned children give no
+intrinsic height, so the box collapses and the control vanishes.
+
+**`vScrollBar` on a frame scrolls its contents.** The drawer attaches one to
+both lists; without it a long list just runs off the bottom.
+
 **Script order differs from the original.** Konfabulator resolved
 `includeFile()` on demand, so order didn't matter. Here `FrameWrapper.js` must
 precede `RoundButton.js` and `FlashingButton.js`, and `includeFile` must exist
