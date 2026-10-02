@@ -117,6 +117,29 @@ in the main process answered over `ipcRenderer.sendSync`: the renderer blocks
 while the main process keeps running, which is the freeze Konfabulator had.
 `event.returnValue` can be assigned asynchronously — verified.
 
+**`widget.extractFile` must return a copy.** Konfabulator unpacked a resource
+out of the compressed bundle to a temp path, and callers treat the result as
+disposable — `Localization.js` deletes it right after reading. Returning the
+real asset path therefore *deleted the shipped strings files* on every run.
+`filesystem.remove` also refuses anything under `assets/` as a backstop.
+
+**`widget.locale` must be a bare language code.** The resource folders are
+`en`/`fr`/`tr`; `navigator.language` is `fr-FR` and never matches.
+
+**Konfabulator supplied dragging, click-through and window sizing**, so the
+widget implements none of them — see `shim/interaction.js`. Three traps there:
+dragging must test only the element under the cursor (walking ancestors marks
+everything interactive, because controls sit inside frames that have their own
+handlers); click-through has to sample image alpha, since a transparent pixel
+still hit-tests; and window fitting must measure in the stage's own coordinate
+space, or the offset that uncovers content above the origin cancels itself out
+and oscillates forever.
+
+**`visible` must clip as well as hide.** CSS `visibility` is inherited but a
+descendant can set it back to `visible`, which Konfabulator never allowed —
+the drawer's dropdown kept painting below the collapsed widget. Hidden
+elements keep their box, because layout code reads offsets off them.
+
 **Script order differs from the original.** Konfabulator resolved
 `includeFile()` on demand, so order didn't matter. Here `FrameWrapper.js` must
 precede `RoundButton.js` and `FlashingButton.js`, and `includeFile` must exist
