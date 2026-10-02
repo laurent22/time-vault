@@ -19,14 +19,13 @@ const { DatabaseSync } = require('node:sqlite');
 
 const ROOT_FOLDER = 'Time Vault';
 
-// Repeated at the top of every note, so the warning can't be missed whichever
-// note someone opens.
-const WARNING = [
-	'> [!warning]',
-	'> **One-way sync from TimeVault.** This note is regenerated from the',
-	'> TimeVault database every time the app syncs. Any edit made here will',
-	'> be overwritten without warning — change the data in TimeVault instead.',
-].join('\n');
+// At the top of every note, so it can't be missed whichever one someone
+// opens — but one line, since it's read on every visit to say something you
+// only need to learn once.
+//
+// A plain blockquote: Joplin loads no admonition plugin, so GitHub's
+// "> [!warning]" syntax renders as literal text rather than a callout.
+const WARNING = '> ⚠️ **Synced from TimeVault** — edits made here will be overwritten.';
 
 // --- reading the database -------------------------------------------------
 
