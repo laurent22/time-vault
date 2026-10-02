@@ -30,7 +30,9 @@ function createWindow() {
 		transparent: true,
 		frame: false,
 		hasShadow: false,
-		alwaysOnTop: true,
+		// Off by default; shim/always-on-top.js turns it on at startup if the
+		// preference says so.
+		alwaysOnTop: false,
 		// Resizable so the renderer can size the window to the widget's
 		// content; there's no frame, so the user can't drag-resize it anyway.
 		resizable: true,

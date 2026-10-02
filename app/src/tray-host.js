@@ -14,7 +14,7 @@ let tray = null;
 let getWindow = () => null;
 
 // What the tray shows about the current timer, pushed from the renderer.
-let state = { running: false, project: '', elapsed: '', alwaysOnTop: true };
+let state = { running: false, project: '', elapsed: '', alwaysOnTop: false };
 
 // Two icons, derived from the original 2008 artwork: hollow when stopped,
 // filled while timing. The original's AutoHotkey tray never did this — it was

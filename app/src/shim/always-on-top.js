@@ -15,11 +15,10 @@
 	const host = globalThis.tvHost || {};
 
 	// Not declared in the .kon — it's new — so the preferences shim creates
-	// it on first access, defaulting to empty. Konfabulator's own default was
-	// to float, so an unset value means on.
+	// it on first access, defaulting to empty. An unset value means off:
+	// a window that floats over everything is intrusive unless asked for.
 	function isEnabled() {
-		const v = globalThis.preferences.alwaysOnTop.value;
-		return v === '' ? true : v === '1';
+		return globalThis.preferences.alwaysOnTop.value === '1';
 	}
 
 	function setEnabled(on) {
