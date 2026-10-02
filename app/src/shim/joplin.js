@@ -24,10 +24,29 @@
 	globalThis.konJoplinEnabled = enabled;
 	globalThis.konJoplinSetEnabled = (on) => { setPref('joplinSyncEnabled', on); publish(); };
 
+	// Tracks the last value we told the main process about, so switching the
+	// setting on can be told apart from it merely being on already. Only the
+	// transition should authorise; doing it whenever the feature is enabled
+	// would prompt on every launch.
+	let lastPublished = null;
+
 	// Tell the main process, so the Joplin commands appear in or vanish from
 	// the application menu.
 	function publish() {
-		if (host.joplinSetEnabled) host.joplinSetEnabled(enabled());
+		const on = enabled();
+		const turnedOn = on && lastPublished === false;
+		lastPublished = on;
+		if (host.joplinSetEnabled) host.joplinSetEnabled(on);
+
+		// Switching it on is the moment to get authorised: the user has just
+		// asked for the feature, so Joplin's prompt is expected rather than an
+		// interruption. Without this the silent triggers would skip forever —
+		// they refuse to prompt by design — and the only way to ever authorise
+		// would be finding a menu item.
+		if (turnedOn && host.joplinSync) {
+			host.joplinSync({ interactive: true })
+				.catch((e) => console.warn('[joplin] authorisation failed:', e.message));
+		}
 	}
 
 	// Syncs quietly: no dialogs, no prompt. Used by the automatic triggers,

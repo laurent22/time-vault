@@ -68,6 +68,9 @@ async function connect(parentWindow, { interactive = true } = {}) {
 		return client;
 	}
 
+	// A background sync won't interrupt to ask for authorisation: it wasn't
+	// asked for at this moment. Switching the setting on is what prompts, and
+	// the menu commands prompt on demand.
 	if (!interactive) return null;
 
 	// No token, or it's been revoked: ask for one.

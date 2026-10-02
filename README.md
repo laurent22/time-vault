@@ -52,11 +52,13 @@ Your data lives in `~/Library/Application Support/TimeVault` on macOS — `Event
 
 ## Syncing to Joplin
 
-Optional, and off by default. Turn it on in **Preferences → Joplin**, with Joplin running and its Web Clipper service enabled (Joplin → Settings → Web Clipper). The first sync asks Joplin to authorise TimeVault; accept the prompt there and the token is remembered.
+Optional, and off by default. Turn it on in **Preferences → Joplin**, with Joplin running and its Web Clipper service enabled (Joplin → Settings → Web Clipper). Switching it on asks Joplin to authorise TimeVault; accept the prompt there and the token is remembered.
 
 It writes a **Time Vault** notebook containing a Summary note and one note per project, each listing its entries as a table. The sync is **one way**: those notes are rewritten from the database every time, so anything edited in Joplin is lost. Each note says so at the top.
 
 Once enabled it syncs after each timed entry and when the app quits. There's also **Reports → Sync to Joplin Now**, and the same on the widget's right-click menu, for syncing on the spot.
+
+Those automatic syncs never interrupt: if Joplin isn't running, or authorisation has been revoked, they're skipped silently rather than raising a dialog mid-task. Use one of the menu commands to see what went wrong.
 
 The Joplin port is found the same way the Web Clipper finds it — probing ten ports from 41184 for a release build and 27583 for a development one — so it works against either without configuration.
 
