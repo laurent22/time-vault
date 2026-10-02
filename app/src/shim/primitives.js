@@ -643,12 +643,26 @@ class Text extends KonObject {
 		this._color = null;
 
 		this.node.style.whiteSpace = 'nowrap';
-		// Konfabulator drew text centred on the line it was given. CSS
-		// 'normal' leaves the glyphs riding high in the line box — enough
-		// that WidGUI's buttons, which centre the box inside a 16px button,
-		// still looked top-aligned. A line-height of 1 makes the box hug the
-		// glyphs, so centring the box centres what you actually see.
+		// Konfabulator positioned text by its own box, and callers centre
+		// that box inside their control — WidGUI's buttons do exactly that.
+		// CSS reserves room for descenders whether or not the text has any,
+		// so the visible glyphs end up sitting above the middle of the box
+		// and the label looks top-aligned.
+		//
+		// Making the element a flex container centres the line box on the
+		// element's own height, which puts the ink where the caller's
+		// arithmetic expects it. Measured from rendered pixels: 20px above
+		// and 23px below at 3x before, balanced after.
 		this.node.style.lineHeight = '1';
+		this.node.style.display = 'flex';
+		this.node.style.alignItems = 'center';
+		// A line box reserves descender space whether the text uses it or
+		// not, so the visible glyphs sit above the box's middle and a label
+		// centred by its box still reads as high. Nudging down by the unused
+		// descender puts the ink where the eye expects it. Measured from
+		// rendered pixels rather than box geometry, which reports this as
+		// already centred.
+		this.node.style.paddingTop = 'calc(0.11em)';
 
 		// Writing to text.style.fontSize etc. should hit the DOM directly.
 		this.style = this.node.style;
@@ -711,10 +725,14 @@ class Text extends KonObject {
 	// of the buttons below it.
 	get height() {
 		const rect = this.node.getBoundingClientRect();
-		if (rect.height > 0) return Math.ceil(rect.height);
+		// An empty flex box still has the padding that centres the glyphs,
+		// so a few stray pixels aren't a real line — fall through to the
+		// line-height measurement below, which is what MainDrawer's empty
+		// Description column needs.
+		if (rect.height > 4) return Math.ceil(rect.height);
 
 		const measured = measureText(this.node).height;
-		if (measured > 0) return measured;
+		if (measured > 4) return measured;
 
 		// An empty string collapses to nothing in the DOM, but Konfabulator
 		// still reported a line's height. MainDrawer advances its row cursor
