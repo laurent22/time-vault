@@ -38,22 +38,24 @@ async function check(name, fn) {
 		assert.strictEqual(prod[0], BASE_PORTS.prod, 'a release build should try the prod base first');
 	});
 
-	await check('the whole preferred range comes before the other one', () => {
-		// Otherwise an instance on a walked-up port of the wrong range would
-		// win over the right one on its base port.
-		const c = portCandidates(true);
-		const firstProd = c.indexOf(BASE_PORTS.prod);
-		const lastDev = c.lastIndexOf(BASE_PORTS.dev + PORT_ATTEMPTS - 1);
-		assert.ok(lastDev < firstProd, 'the dev range must be exhausted before prod is touched');
+	await check('the ranges are matched, never crossed over', () => {
+		// Falling back to the other range sounds helpful but means a dev
+		// build syncs into the real notes, and authorises against an app you
+		// aren't watching so the prompt seems not to appear. Not syncing is
+		// the better failure.
+		const dev = portCandidates(true);
+		assert.ok(!dev.includes(BASE_PORTS.prod),
+			'a dev build must not probe the release range');
+
+		const prod = portCandidates(false);
+		assert.ok(!prod.includes(BASE_PORTS.dev),
+			'a release build must not probe the dev range');
 	});
 
-	await check('both ranges are tried, so a single instance is always found', () => {
-		// The preference must not become a restriction.
+	await check('each build probes exactly its own range', () => {
 		for (const preferDev of [true, false]) {
 			const c = portCandidates(preferDev);
-			assert.strictEqual(c.length, PORT_ATTEMPTS * 2, 'both ranges should be probed');
-			assert.ok(c.includes(BASE_PORTS.dev), 'the dev base should be in the list');
-			assert.ok(c.includes(BASE_PORTS.prod), 'the prod base should be in the list');
+			assert.strictEqual(c.length, PORT_ATTEMPTS, 'one range, ten ports');
 			assert.strictEqual(new Set(c).size, c.length, 'no port should be probed twice');
 		}
 	});
@@ -71,6 +73,24 @@ async function check(name, fn) {
 		// return a value rather than reject.
 		const port = await discoverPort(true);
 		assert.ok(port === null || Number.isInteger(port), `unexpected result: ${port}`);
+	});
+
+	await check('a stored port from the wrong range is discarded', async () => {
+		// A token saved while the ranges still crossed over would otherwise
+		// pin a dev build to the release app forever — the stored port is
+		// reused whenever it answers, so the matching would never take hold.
+		const { JoplinClient } = require('../src/joplin-client');
+		const client = new JoplinClient(BASE_PORTS.prod, 'a-token-for-the-release-app');
+
+		// preferDev: the release port is now out of range.
+		await client.connect(true);
+
+		assert.notStrictEqual(client.port, BASE_PORTS.prod,
+			'the release port should not have been kept');
+		if (client.port !== null) {
+			assert.ok(portCandidates(true).includes(client.port),
+				`settled on ${client.port}, which is outside the dev range`);
+		}
 	});
 
 	// --- waitForAuth, against a stub that mimics Joplin's answers ----------

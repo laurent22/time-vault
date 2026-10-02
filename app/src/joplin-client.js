@@ -47,24 +47,20 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
 
 // The ports to try, in order.
 //
-// A development TimeVault looks for a development Joplin first and a release
-// one for a release Joplin, so that running both pairs at once doesn't cross
-// them over — which is easy to miss, since the authorisation prompt then
-// appears in whichever Joplin you weren't watching. The other range still
-// follows, so a single running instance is always found.
+// A development TimeVault talks to a development Joplin and a release one to a
+// release Joplin — matched, not merely preferred. Falling back to the other
+// range sounds helpful but means a dev build silently syncs into the real
+// notes, and that it authorises against an app you aren't watching, so the
+// prompt looks like it never appeared. Not syncing is the better failure.
 //
 // Separate from the probing so the ordering can be tested without binding the
 // real ports, which a running Joplin already owns.
 function portCandidates(preferDev) {
-	const bases = preferDev
-		? [BASE_PORTS.dev, BASE_PORTS.prod]
-		: [BASE_PORTS.prod, BASE_PORTS.dev];
+	const base = preferDev ? BASE_PORTS.dev : BASE_PORTS.prod;
 
+	// Joplin walks up from its base when the port is taken.
 	const candidates = [];
-	// The preferred range is exhausted before the other is touched.
-	for (const base of bases) {
-		for (let offset = 0; offset < PORT_ATTEMPTS; offset++) candidates.push(base + offset);
-	}
+	for (let offset = 0; offset < PORT_ATTEMPTS; offset++) candidates.push(base + offset);
 	return candidates;
 }
 
@@ -102,7 +98,17 @@ class JoplinClient {
 	// The stored port is kept if it's still answering: the token belongs to
 	// that particular Joplin, so hopping to another instance would only mean
 	// re-authorising. Discovery is for when it's gone.
-	async connect(preferDev) {
+	//
+	// A stored port outside this build's range is dropped, though — otherwise
+	// a token saved while the ranges still crossed over would pin a dev build
+	// to the release app forever, and the matching would never take effect.
+	async connect(preferDev = defaultPreferDev()) {
+		const expected = portCandidates(preferDev);
+		if (this.port && !expected.includes(this.port)) {
+			this.port = null;
+			this.token = null;
+		}
+
 		if (this.port && await this.isAlive()) return true;
 		this.port = await discoverPort(preferDev);
 		return this.port !== null;

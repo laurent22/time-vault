@@ -211,6 +211,17 @@ test reads back the Spaces pinning instead. All three callers (renderer, tray,
 the Joplin auth flow restoring it) go through the one helper, or whichever
 forgets the level silently downgrades it.
 
+**The Joplin port ranges are matched, not merely preferred.** 41184 for a
+packaged build, 27583 for `npm start` (`app.isPackaged`). There is no fallback
+between them on purpose: a dev build reaching the release app writes into real
+notes and authorises against a window you aren't watching. `connect()` also
+discards a *stored* port outside the current range, or a token saved before
+this rule would pin a dev build to the release app forever. Note that
+`productName` in package.json *is* honoured for an unpackaged app launched as
+`electron .` — userData is `TimeVault`, not `Electron`. A standalone
+`electron some-script.js` gets `Electron`, which is why probe scripts appear to
+use a different profile than the app.
+
 **Joplin keeps only the newest auth token.** `POST /auth` replaces it, so a
 second request invalidates the first: `/auth/check` then answers
 `{"error":"...Invalid auth token..."}` rather than a status, and a wait on the
