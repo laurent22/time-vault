@@ -28,17 +28,39 @@
 
 	let pending = null;
 
+	function snapshot() {
+		const flat = {};
+		for (const name of Object.keys(preferences)) flat[name] = preferences[name].value;
+		return flat;
+	}
+
 	function scheduleSave() {
 		if (pending) return;
 		pending = setTimeout(() => {
 			pending = null;
-			const flat = {};
-			for (const name of Object.keys(preferences)) flat[name] = preferences[name].value;
 			if (globalThis.tvHost && globalThis.tvHost.savePreferences) {
-				globalThis.tvHost.savePreferences(flat);
+				globalThis.tvHost.savePreferences(snapshot());
 			}
 		}, 250);
 	}
+
+	// Konfabulator's savePreferences(): write now rather than waiting for the
+	// debounce. The widget calls it after toggling "show archived projects"
+	// and on shutdown, so the value is on disk before whatever happens next.
+	function flushSave() {
+		if (pending) {
+			clearTimeout(pending);
+			pending = null;
+		}
+		const host = globalThis.tvHost;
+		if (!host) return;
+		// Prefer the synchronous channel so the write has landed by the time
+		// this returns, which is the guarantee the name implies.
+		if (host.savePreferencesSync) host.savePreferencesSync(snapshot());
+		else if (host.savePreferences) host.savePreferences(snapshot());
+	}
+
+	globalThis.savePreferences = flushSave;
 
 	class Preference {
 		constructor(name, meta) {
@@ -90,13 +112,6 @@
 	// Flush immediately on unload, so a quit doesn't lose the last 250ms of
 	// changes (window position in particular is written as the window moves).
 	globalThis.addEventListener('beforeunload', () => {
-		if (!pending) return;
-		clearTimeout(pending);
-		pending = null;
-		const flat = {};
-		for (const name of Object.keys(preferences)) flat[name] = preferences[name].value;
-		if (globalThis.tvHost && globalThis.tvHost.savePreferencesSync) {
-			globalThis.tvHost.savePreferencesSync(flat);
-		}
+		if (pending) flushSave();
 	});
 })();
