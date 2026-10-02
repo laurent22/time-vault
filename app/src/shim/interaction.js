@@ -22,23 +22,19 @@
 	let lastScreenY = 0;
 	let movedWhileDown = false;
 
-	// An element is a drag handle unless it, or something it sits inside,
-	// wants the press for itself. The widget's own handlers are attached to
-	// specific images and frames, so anything carrying one is interactive.
+	// An element is a drag handle unless the thing actually under the cursor
+	// wants the press for itself.
+	//
+	// Only the hit element is consulted, not its ancestors: the widget nests
+	// its controls inside frames that carry their own handlers, so walking
+	// up the tree marks nearly everything interactive and the window stops
+	// dragging anywhere.
 	function isInteractive(target) {
-		let node = target;
-		while (node && node !== document.body) {
-			if (node.__konObject) {
-				const k = node.__konObject;
-				if (typeof k.onMouseDown === 'function'
-					|| typeof k.onMouseUp === 'function'
-					|| typeof k.onMultiClick === 'function') {
-					return true;
-				}
-			}
-			node = node.parentNode;
-		}
-		return false;
+		const k = target && target.__konObject;
+		if (!k) return false;
+		return typeof k.onMouseDown === 'function'
+			|| typeof k.onMouseUp === 'function'
+			|| typeof k.onMultiClick === 'function';
 	}
 
 	document.addEventListener('mousedown', (e) => {
