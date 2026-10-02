@@ -11,8 +11,10 @@ contextBridge.exposeInMainWorld('tvHost', {
 	// --- window ---
 	moveBy: (dx, dy) => ipcRenderer.send('window:move-by', dx, dy),
 	getPosition: () => ipcRenderer.invoke('window:get-position'),
+	windowPosition: () => ipcRenderer.sendSync('window:get-position-sync'),
 	setPosition: (x, y) => ipcRenderer.send('window:set-position', x, y),
 	setSize: (w, h) => ipcRenderer.send('window:set-size', w, h),
+	setIgnoreMouseEvents: (ignore) => ipcRenderer.send('window:set-ignore-mouse', ignore),
 	getWorkArea: () => ipcRenderer.invoke('screen:get-work-area'),
 
 	// --- filesystem (sync) ---
@@ -37,6 +39,7 @@ contextBridge.exposeInMainWorld('tvHost', {
 	workArea: () => ipcRenderer.sendSync('host:work-area'),
 	appVersion: () => ipcRenderer.sendSync('host:app-version'),
 	assetRoot: () => ipcRenderer.sendSync('host:asset-root'),
+	extractFile: (rel) => ipcRenderer.sendSync('host:extract-file', rel),
 	platform: () => process.platform,
 	openExternal: (url) => ipcRenderer.send('host:open-external', url),
 });

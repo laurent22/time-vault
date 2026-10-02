@@ -77,7 +77,16 @@ const fsOps = {
 	},
 
 	remove: (p) => {
-		try { fs.rmSync(p, { recursive: true, force: true }); return true; } catch { return false; }
+		// Never delete shipped assets. The widget calls remove() on paths it
+		// believes are temporary extracts, and a resolution bug there once
+		// wiped the Localizable.strings files out of the source tree.
+		const assets = path.join(__dirname, '..', 'assets');
+		const resolved = path.resolve(String(p));
+		if (resolved === assets || resolved.startsWith(`${assets}${path.sep}`)) {
+			console.warn('[host] refusing to remove a bundled asset:', resolved);
+			return false;
+		}
+		try { fs.rmSync(resolved, { recursive: true, force: true }); return true; } catch { return false; }
 	},
 
 	copy: (from, to) => {
@@ -132,6 +141,27 @@ function register() {
 	// bundle-relative paths the ported code uses.
 	ipcMain.on('host:asset-root', (event) => {
 		event.returnValue = path.join(__dirname, '..', 'assets');
+	});
+
+	// Konfabulator's widget.extractFile(): unpack a bundle resource to a
+	// temporary path and hand that back. Callers own the result and delete
+	// it when done, so this must never return the asset itself.
+	ipcMain.on('host:extract-file', (event, rel) => {
+		const source = path.join(__dirname, '..', 'assets', String(rel).replace(/^Resources\//, ''));
+		if (!fs.existsSync(source)) {
+			event.returnValue = undefined;
+			return;
+		}
+		try {
+			const dir = path.join(DATA_DIR, 'extracted');
+			fs.mkdirSync(dir, { recursive: true });
+			const target = path.join(dir, `${Date.now()}-${path.basename(source)}`);
+			fs.copyFileSync(source, target);
+			event.returnValue = target;
+		} catch (e) {
+			console.error('[host] extractFile failed:', e.message);
+			event.returnValue = undefined;
+		}
 	});
 
 	ipcMain.on('host:open-external', (_event, url) => {

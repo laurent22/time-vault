@@ -27,6 +27,9 @@
 class KonObject {
 	constructor(node) {
 		this.node = node;
+		// Back-reference so DOM-level code (drag handling, hit testing) can
+		// find the Konfabulator object a node belongs to.
+		this.node.__konObject = this;
 		this.node.style.position = 'absolute';
 		this.node.style.left = '0px';
 		this.node.style.top = '0px';
@@ -59,17 +62,53 @@ class KonObject {
 		this.node.style.top = `${this._vOffset}px`;
 	}
 
-	// Konfabulator opacity is 0-255. CSS wants 0-1.
+	// Konfabulator opacity is 0-255. CSS wants 0-1. The widget's own maths
+	// overshoots the range in places (MainWindow's eventFrame reaches 432),
+	// which Konfabulator clamped, so clamp here rather than emitting an
+	// out-of-range CSS value.
 	get opacity() { return this._opacity; }
 	set opacity(v) {
-		this._opacity = Number(v) || 0;
+		const n = Number(v);
+		this._opacity = Math.max(0, Math.min(255, Number.isFinite(n) ? n : 0));
 		this.node.style.opacity = String(this._opacity / 255);
+	}
+
+	// Konfabulator rotated about the element's centre, in degrees.
+	// MainWindow spins the screw image as the drawer opens.
+	get rotation() { return this._rotation || 0; }
+	set rotation(v) {
+		const n = Number(v);
+		this._rotation = Number.isFinite(n) ? n : 0;
+		this._applyTransform();
+	}
+
+	_applyTransform() {
+		const parts = [];
+		if (this._rotation) parts.push(`rotate(${this._rotation}deg)`);
+		if (this._baseTransform) parts.unshift(this._baseTransform);
+		this.node.style.transform = parts.join(' ');
 	}
 
 	get visible() { return this._visible; }
 	set visible(v) {
 		this._visible = !!v;
-		this.node.style.visibility = this._visible ? 'visible' : 'hidden';
+		// CSS visibility is inherited but a descendant can override it back
+		// to visible, which Konfabulator never allowed — hiding a container
+		// hid everything in it. The drawer's dropdown list sets its own
+		// visibility and so kept rendering below the closed widget.
+		// 'collapse' can't be overridden by descendants on non-table
+		// elements in Blink, but it's not portable, so clip instead: the
+		// element keeps its box (layout code reads offsets off hidden
+		// elements) while nothing inside it can paint.
+		if (this._visible) {
+			this.node.style.visibility = 'visible';
+			this.node.style.clipPath = this._baseClip || '';
+			this.node.style.pointerEvents = this._tracking ? 'auto' : 'none';
+		} else {
+			this.node.style.visibility = 'hidden';
+			this.node.style.clipPath = 'inset(50%)';
+			this.node.style.pointerEvents = 'none';
+		}
 	}
 
 	get zOrder() { return this._zOrder; }
@@ -81,7 +120,8 @@ class KonObject {
 	get tracking() { return this._tracking; }
 	set tracking(v) {
 		this._tracking = !!v;
-		this.node.style.pointerEvents = this._tracking ? 'auto' : 'none';
+		// A hidden element never tracks, regardless of this flag.
+		this.node.style.pointerEvents = (this._tracking && this._visible) ? 'auto' : 'none';
 	}
 
 	get tooltip() { return this._tooltip; }
@@ -338,7 +378,10 @@ class Text extends KonObject {
 		this._anchorStyle = v;
 		// Default Konfabulator text is positioned by its baseline; "topLeft"
 		// switches to the box's top-left, which is what CSS does natively.
-		this.node.style.transform = v === 'topLeft' ? '' : 'translateY(-100%)';
+		// Goes through _baseTransform so it composes with rotation rather
+		// than overwriting it.
+		this._baseTransform = v === 'topLeft' ? '' : 'translateY(-100%)';
+		this._applyTransform();
 	}
 
 	get hAlign() { return this._hAlign; }

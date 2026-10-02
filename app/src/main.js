@@ -10,6 +10,7 @@ const path = require('node:path');
 const host = require('./host');
 const sqlHost = require('./sql-host');
 const formHost = require('./form-host');
+const windowHost = require('./window-host');
 
 // The original skin is 1x artwork laid out in absolute pixel coordinates, so
 // the window starts at a size big enough for the default layout. MainWindow.js
@@ -27,7 +28,9 @@ function createWindow() {
 		frame: false,
 		hasShadow: false,
 		alwaysOnTop: true,
-		resizable: false,
+		// Resizable so the renderer can size the window to the widget's
+		// content; there's no frame, so the user can't drag-resize it anyway.
+		resizable: true,
 		// Widget-style windows shouldn't steal focus or appear in the app
 		// switcher the way a document window does.
 		skipTaskbar: true,
@@ -45,41 +48,11 @@ function createWindow() {
 	});
 }
 
-// Dragging: there's no titlebar, so the renderer tells us where to move the
-// window. Deliberately manual rather than -webkit-app-region:drag, because in
-// the original only specific skin areas are drag handles.
-ipcMain.on('window:move-by', (event, dx, dy) => {
-	const win = BrowserWindow.fromWebContents(event.sender);
-	if (!win) return;
-	const [x, y] = win.getPosition();
-	win.setPosition(Math.round(x + dx), Math.round(y + dy));
-});
-
-ipcMain.handle('window:get-position', (event) => {
-	const win = BrowserWindow.fromWebContents(event.sender);
-	return win ? win.getPosition() : [0, 0];
-});
-
-ipcMain.on('window:set-position', (event, x, y) => {
-	const win = BrowserWindow.fromWebContents(event.sender);
-	if (win) win.setPosition(Math.round(x), Math.round(y));
-});
-
-ipcMain.on('window:set-size', (event, w, h) => {
-	const win = BrowserWindow.fromWebContents(event.sender);
-	if (win) win.setSize(Math.round(w), Math.round(h));
-});
-
-// Konfabulator's screen.availableWidth / availableHeight.
-ipcMain.handle('screen:get-work-area', () => {
-	const { workArea } = screen.getPrimaryDisplay();
-	return workArea;
-});
-
 app.whenReady().then(() => {
 	host.register();
 	sqlHost.register();
 	formHost.register();
+	windowHost.register();
 	createWindow();
 
 	app.on('activate', () => {

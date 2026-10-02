@@ -121,10 +121,22 @@
 	globalThis.widget = {
 		name: 'TimeVault',
 		version: host.appVersion ? host.appVersion() : '0.1.0',
-		get locale() { return (globalThis.navigator && navigator.language) || 'en'; },
-		// Konfabulator extracted files out of the widget bundle; the port ships
-		// them unpacked, so the path is already usable.
-		extractFile: (p) => p,
+		// Konfabulator reported a bare ISO code, matching the Resources/<code>
+		// folders. navigator.language is a full tag ("fr-FR"), which would
+		// never match, so it's reduced to the language subtag. Falls back to
+		// English for anything the widget doesn't ship.
+		get locale() {
+			const tag = (globalThis.navigator && navigator.language) || 'en';
+			const base = String(tag).split('-')[0].toLowerCase();
+			return ['en', 'fr', 'tr'].includes(base) ? base : 'en';
+		},
+		// Konfabulator unpacked a file out of the compressed widget bundle to
+		// a temporary location and returned that path. Callers treat the
+		// result as a throwaway — Localization.js deletes it right after
+		// reading — so this must return a copy, not the asset itself.
+		// Returning the real path here silently deleted the shipped
+		// Localizable.strings files.
+		extractFile: (p) => (host.extractFile ? host.extractFile(String(p)) : p),
 		setDockItem: () => {},
 		onWillChangePreferences: null,
 		onPreferencesChanged: null,

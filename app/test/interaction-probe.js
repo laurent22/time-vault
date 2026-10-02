@@ -15,12 +15,14 @@ app.setPath('userData', TEST_USER_DATA);
 const host = require('../src/host');
 const sqlHost = require('../src/sql-host');
 const formHost = require('../src/form-host');
+const windowHost = require('../src/window-host');
 
 app.on('window-all-closed', () => {});
 
 app.whenReady().then(async () => {
 	host.register();
 	sqlHost.register();
+	windowHost.register();
 
 	// Don't register the real form host: starting a timer with no project
 	// opens a modal, and nothing here could dismiss it. Auto-answer instead,

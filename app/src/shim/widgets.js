@@ -51,17 +51,16 @@
 			if (host.setPosition) host.setPosition(this._winX, this._winY);
 		}
 
+		// Konfabulator sized a window to its content automatically; the
+		// widget assigns these while laying out, often one axis at a time and
+		// often with a zero still in the other. Record them, but leave the
+		// actual OS window to konFitWindowToContent, which measures what was
+		// really laid out.
 		get width() { return this._width; }
-		set width(v) {
-			this._width = Math.round(Number(v) || 0);
-			if (host.setSize) host.setSize(this._width, this._height);
-		}
+		set width(v) { this._width = Math.round(Number(v) || 0); }
 
 		get height() { return this._height; }
-		set height(v) {
-			this._height = Math.round(Number(v) || 0);
-			if (host.setSize) host.setSize(this._width, this._height);
-		}
+		set height(v) { this._height = Math.round(Number(v) || 0); }
 
 		get title() { return this._title; }
 		set title(v) {
