@@ -164,6 +164,11 @@ function register() {
 		}
 	});
 
+	// Renderer errors, echoed to the terminal running the app.
+	ipcMain.on('host:log-error', (_event, message) => {
+		console.error('[renderer]', message);
+	});
+
 	ipcMain.on('host:open-external', (_event, url) => {
 		// Only http(s) and mailto: the widget's one call site is a version
 		// check URL, and anything else would be a way to launch arbitrary

@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('tvHost', {
 		}
 	},
 	setTrayState: (state) => ipcRenderer.send('host:tray-state', state),
+	logError: (message) => ipcRenderer.send('host:log-error', message),
 
 	// --- preferences ---
 	loadPreferences: () => ipcRenderer.sendSync('host:load-preferences'),
