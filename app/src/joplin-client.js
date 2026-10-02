@@ -24,6 +24,17 @@ const BASE_PORTS = {
 const PORT_ATTEMPTS = 10;
 const PING_TIMEOUT_MS = 400;
 
+// Whether this is a development build, which decides which Joplin to look for
+// first. `electron` is required lazily: this module is also loaded from plain
+// Node by the tests and the port probe, where there is no Electron at all.
+function defaultPreferDev() {
+	try {
+		return !require('electron').app.isPackaged;
+	} catch {
+		return false;
+	}
+}
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -34,15 +45,34 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
 	}
 }
 
-// Returns the port Joplin is listening on, or null. Both the prod and dev
-// ranges are probed, interleaved so a running dev build is found as quickly
-// as a prod one.
-async function discoverPort() {
+// The ports to try, in order.
+//
+// A development TimeVault looks for a development Joplin first and a release
+// one for a release Joplin, so that running both pairs at once doesn't cross
+// them over — which is easy to miss, since the authorisation prompt then
+// appears in whichever Joplin you weren't watching. The other range still
+// follows, so a single running instance is always found.
+//
+// Separate from the probing so the ordering can be tested without binding the
+// real ports, which a running Joplin already owns.
+function portCandidates(preferDev) {
+	const bases = preferDev
+		? [BASE_PORTS.dev, BASE_PORTS.prod]
+		: [BASE_PORTS.prod, BASE_PORTS.dev];
+
 	const candidates = [];
-	for (let offset = 0; offset < PORT_ATTEMPTS; offset++) {
-		candidates.push(BASE_PORTS.prod + offset);
-		candidates.push(BASE_PORTS.dev + offset);
+	// The preferred range is exhausted before the other is touched.
+	for (const base of bases) {
+		for (let offset = 0; offset < PORT_ATTEMPTS; offset++) candidates.push(base + offset);
 	}
+	return candidates;
+}
+
+// Returns the port Joplin is listening on, or null.
+//
+// `preferDev` defaults to whether this build is unpackaged, i.e. `npm start`.
+async function discoverPort(preferDev = defaultPreferDev()) {
+	const candidates = portCandidates(preferDev);
 
 	for (const port of candidates) {
 		try {
@@ -69,9 +99,12 @@ class JoplinClient {
 		return `http://127.0.0.1:${this.port}`;
 	}
 
-	async connect() {
+	// The stored port is kept if it's still answering: the token belongs to
+	// that particular Joplin, so hopping to another instance would only mean
+	// re-authorising. Discovery is for when it's gone.
+	async connect(preferDev) {
 		if (this.port && await this.isAlive()) return true;
-		this.port = await discoverPort();
+		this.port = await discoverPort(preferDev);
 		return this.port !== null;
 	}
 
@@ -206,4 +239,4 @@ class JoplinClient {
 	}
 }
 
-module.exports = { JoplinClient, discoverPort, BASE_PORTS };
+module.exports = { JoplinClient, discoverPort, portCandidates, BASE_PORTS, PORT_ATTEMPTS };

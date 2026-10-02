@@ -73,26 +73,65 @@ async function connect(parentWindow, { interactive = true } = {}) {
 	// the menu commands prompt on demand.
 	if (!interactive) return null;
 
-	// No token, or it's been revoked: ask for one.
+	// No token, or it's been revoked: ask for one. This dispatches the
+	// request into Joplin, which renders a modal *inside its own window*
+	// reading "The Web Clipper needs your authorisation to access your data."
+	// — not a native dialog, so it can be hidden behind other windows.
 	const authToken = await client.requestAuth();
 
-	const choice = dialog.showMessageBoxSync(parentWindow || undefined, {
+	// Get out of the way so that modal is reachable. The widget is frameless
+	// and often always-on-top, which puts it above Joplin; a modal sheet of
+	// our own would sit on top of everything and block this process while
+	// Joplin waits for an answer that can't be given. That combination is
+	// exactly why the prompt looked like it never appeared.
+	const wasAlwaysOnTop = parentWindow && !parentWindow.isDestroyed()
+		&& parentWindow.isAlwaysOnTop();
+	if (wasAlwaysOnTop) parentWindow.setAlwaysOnTop(false);
+
+	// Polling starts before anything is shown, so accepting in Joplin is
+	// noticed whether or not the notice below is dismissed first.
+	const pending = client.waitForAuth(authToken, { timeoutMs: 180000 });
+
+	// Non-blocking: showMessageBox (not ...Sync) lets this process keep
+	// polling, and no parent window means it doesn't become a sheet attached
+	// to — and stacked above — the widget. There's no API to dismiss it
+	// programmatically, so it says to close it rather than promising it will
+	// go by itself.
+	dialog.showMessageBox({
 		type: 'info',
 		message: 'Authorise TimeVault in Joplin',
-		detail: 'Joplin is asking whether to grant TimeVault access. Switch to '
-			+ 'Joplin and accept the request, then come back here.',
-		buttons: ['Waiting…', 'Cancel'],
+		detail: 'Switch to Joplin and choose "Grant authorisation".\n\n'
+			+ 'The request appears inside the Joplin window rather than as a '
+			+ 'separate alert, so bring Joplin to the front if you can\'t see '
+			+ 'it.\n\nYou can close this notice; TimeVault keeps waiting for '
+			+ 'about three minutes either way.',
+		buttons: ['OK'],
 		defaultId: 0,
-		cancelId: 1,
+		cancelId: 0,
 	});
-	if (choice === 1) return null;
 
-	const token = await client.waitForAuth(authToken, { timeoutMs: 180000 });
+	let token = null;
+	let timedOut = false;
+	try {
+		token = await pending;
+	} catch {
+		timedOut = true;
+	} finally {
+		if (wasAlwaysOnTop && parentWindow && !parentWindow.isDestroyed()) {
+			parentWindow.setAlwaysOnTop(true);
+		}
+	}
+
 	if (!token) {
 		dialog.showMessageBoxSync(parentWindow || undefined, {
 			type: 'warning',
-			message: 'Joplin refused the request.',
-			detail: 'TimeVault was not granted access, so nothing was synced.',
+			message: timedOut
+				? 'TimeVault is still waiting for authorisation.'
+				: 'Joplin refused the request.',
+			detail: timedOut
+				? 'No answer came back from Joplin, so nothing was synced. '
+					+ 'Switching the setting off and on again will ask once more.'
+				: 'TimeVault was not granted access, so nothing was synced.',
 			buttons: ['OK'],
 		});
 		return null;

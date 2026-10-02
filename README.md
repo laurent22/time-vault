@@ -60,7 +60,9 @@ After that it is entirely automatic, with no "sync now" command: it syncs at sta
 
 The automatic syncs never interrupt: if Joplin isn't running, or authorisation has been revoked, they're skipped silently rather than raising a dialog mid-task. **Reports → Forget Joplin Authorisation** clears the stored token, so switching the setting off and on again will ask for a new one.
 
-The Joplin port is found the same way the Web Clipper finds it — probing ten ports from 41184 for a release build and 27583 for a development one — so it works against either without configuration.
+The Joplin port is found the same way the Web Clipper finds it, probing ten ports from 41184 for a release build and 27583 for a development one, so it works against either without configuration. A development TimeVault looks for a development Joplin first and a release one for a release Joplin, so running both pairs at once doesn't cross them over; the other range is still tried, so a single running instance is always found.
+
+Joplin asks for authorisation with a dialog **inside its own window**, not a separate alert, so bring Joplin to the front if you can't see it — and note that TimeVault's always-on-top option will otherwise cover it.
 
 ## How the port works
 
