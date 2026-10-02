@@ -6,7 +6,7 @@
 
 'use strict';
 
-const { app, Menu, shell } = require('electron');
+const { app, Menu } = require('electron');
 const aboutHost = require('./about-host');
 
 // joplinEnabled reflects the preference; the menu is rebuilt when it
@@ -76,19 +76,14 @@ function install(getWindow, { joplinEnabled = false } = {}) {
 				{ role: 'toggleDevTools' },
 			],
 		},
-		{
+		// On macOS the About item lives in the application menu, so the Help
+		// menu would be empty there — and an empty one still renders.
+		...(isMac ? [] : [{
 			role: 'help',
 			submenu: [
-				...(isMac ? [] : [
-					{ label: 'About TimeVault', click: () => aboutHost.show(getWindow()) },
-					{ type: 'separator' },
-				]),
-				{
-					label: 'Original Widget (2008)',
-					click: () => shell.openExternal('https://en.wikipedia.org/wiki/Yahoo!_Widgets'),
-				},
+				{ label: 'About TimeVault', click: () => aboutHost.show(getWindow()) },
 			],
-		},
+		}]),
 	];
 
 	Menu.setApplicationMenu(Menu.buildFromTemplate(template));
