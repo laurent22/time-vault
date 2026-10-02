@@ -277,3 +277,37 @@ ixCheck('popupMenu passes the original item to onSelect', () => {
 	if (index !== 1) return `expected the stub to choose index 1, got ${index}`;
 	if (seen !== 'carried through') return `onSelect lost the item's own properties (${seen})`;
 });
+
+ixCheck('a frame sized on one axis takes the other from its content', () => {
+	// WidGUI builds its controls by setting a width and letting the height
+	// follow the contents. A frame of absolutely positioned children has no
+	// intrinsic height, so the DOM box collapsed to zero and the control
+	// vanished — this is what hid the drawer's project dropdown.
+	const frame = new Frame();
+	frame.width = 296;
+
+	const bg = new Image();
+	bg.src = 'Resources/Skin/Default/DropdownUp.png';
+	bg.width = 296;
+	bg.height = 16;
+	frame.appendChild(bg);
+
+	document.body.appendChild(frame.node);
+	const r = frame.node.getBoundingClientRect();
+	frame.node.remove();
+
+	if (Math.round(r.width) !== 296) return `width ${r.width}`;
+	if (Math.round(r.height) !== 16) return `height collapsed to ${r.height}, should follow the content`;
+});
+
+ixCheck('a partly sized frame only clips the axis it was given', () => {
+	const frame = new Frame();
+	frame.width = 100;
+	const child = new Image();
+	child.src = 'Resources/Skin/Default/Screw.png';
+	frame.appendChild(child);
+	// Clipping the content-derived axis would cut off children added later.
+	if (getComputedStyle(frame.node).overflow === 'hidden') {
+		return 'a half-sized frame should not clip';
+	}
+});

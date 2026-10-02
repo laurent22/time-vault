@@ -195,8 +195,12 @@ class KonObject {
 		child._parent = this;
 		this.subviews.push(child);
 		this.node.appendChild(child.node);
-		// An interactive frame's clickable area is its children's bounds.
+		// An interactive frame's clickable area is its children's bounds, and
+		// a partly-sized frame takes its other axis from them — both change
+		// when a child arrives. WidGUI builds its controls this way round:
+		// set the width first, then add the contents.
 		this._refreshPointerEvents();
+		if (typeof this._applyClipping === 'function') this._applyClipping();
 	}
 
 	removeChild(child) {
@@ -391,9 +395,29 @@ class Frame extends KonObject {
 	// animating from vOffset -height up behind the widget down to 0, and
 	// without clipping the whole drawer is visible above the window for the
 	// length of the animation.
+	//
+	// Clipping only applies on an axis that was actually given a size.
+	// WidGUI sets a width and leaves the height to the content, and a frame
+	// of absolutely positioned children has no intrinsic height — so without
+	// backfilling the measured height the box collapsed to zero and the
+	// control vanished (this is what hid the drawer's project dropdown).
 	_applyClipping() {
-		const sized = this._width != null || this._height != null;
-		this.node.style.overflow = sized ? 'hidden' : '';
+		const hasW = this._width != null;
+		const hasH = this._height != null;
+
+		if (!hasW && !hasH) {
+			this.node.style.overflow = '';
+			return;
+		}
+
+		const measured = this._measureChildren();
+		if (!hasW && measured.width > 0) this.node.style.width = `${measured.width}px`;
+		if (!hasH && measured.height > 0) this.node.style.height = `${measured.height}px`;
+
+		// Only clip where a size was actually asked for; the backfilled axis
+		// is the content's own extent, so clipping it would be a no-op at
+		// best and cut off later-added children at worst.
+		this.node.style.overflow = (hasW && hasH) ? 'hidden' : 'visible';
 	}
 
 	// Measured from the shim objects rather than the DOM so it works before
