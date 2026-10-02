@@ -47,6 +47,11 @@ function register() {
 		win.setContentSize(Math.max(1, Math.round(w)), Math.max(1, Math.round(h)));
 	});
 
+	ipcMain.on('window:set-always-on-top', (event, on) => {
+		const win = BrowserWindow.fromWebContents(event.sender);
+		if (win) win.setAlwaysOnTop(!!on);
+	});
+
 	// forward:true keeps mousemove flowing to the renderer while ignoring,
 	// which is what lets it notice the cursor returning to solid artwork and
 	// take control back.

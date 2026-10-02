@@ -175,3 +175,4 @@
 "editProject_Archived" = "Arşiv";
 "editProject_ArchivedDescription" = "Proje tamamlandığında onu proje listesi ve raporlarından hariç
 tutmak için bu kutuyu tıklayın";
+"mainWindow_ctxMenu_alwaysOnTop" = "Her zaman üstte";

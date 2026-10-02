@@ -14,11 +14,25 @@ let tray = null;
 let getWindow = () => null;
 
 // What the tray shows about the current timer, pushed from the renderer.
-let state = { running: false, project: '', elapsed: '' };
+let state = { running: false, project: '', elapsed: '', alwaysOnTop: true };
 
-function iconPath() {
-	// A template image lets macOS invert it for light and dark menu bars.
-	return path.join(__dirname, '..', 'assets', 'TrayIconTemplate.png');
+// Two icons, derived from the original 2008 artwork: hollow when stopped,
+// filled while timing. The original's AutoHotkey tray never did this — it was
+// only a liveness watchdog — but telling the two apart at a glance is the
+// point of a menu-bar item.
+//
+// Template images: macOS keeps only the alpha and recolours them to suit the
+// menu bar, so they work in both light and dark.
+function iconPath(running) {
+	const name = running ? 'TrayIconRunningTemplate.png' : 'TrayIconTemplate.png';
+	return path.join(__dirname, '..', 'assets', name);
+}
+
+function loadIcon(running) {
+	const image = nativeImage.createFromPath(iconPath(running));
+	if (image.isEmpty()) return null;
+	image.setTemplateImage(true);
+	return image;
 }
 
 function buildMenu() {
@@ -45,6 +59,24 @@ function buildMenu() {
 			},
 		},
 		{
+			label: 'Always on Top',
+			type: 'checkbox',
+			checked: !!state.alwaysOnTop,
+			click: (item) => {
+				const w = getWindow();
+				if (w && !w.isDestroyed()) {
+					w.setAlwaysOnTop(item.checked);
+					// Tell the renderer the new value so it persists it —
+					// the preferences file belongs to that side. Sending the
+					// value rather than a "changed" ping avoids the two
+					// sides toggling each other.
+					w.webContents.send('tray:set-always-on-top', item.checked);
+				}
+				state.alwaysOnTop = item.checked;
+				refresh();
+			},
+		},
+		{
 			label: 'Preferences…',
 			click: () => send('tray:preferences'),
 		},
@@ -59,6 +91,12 @@ function buildMenu() {
 
 function refresh() {
 	if (!tray) return;
+
+	// Swap the icon so the menu bar shows at a glance whether time is being
+	// recorded.
+	const image = loadIcon(state.running);
+	if (image) tray.setImage(image);
+
 	tray.setContextMenu(buildMenu());
 	tray.setToolTip(state.running
 		? `TimeVault — ${state.elapsed}${state.project ? ` (${state.project})` : ''}`
@@ -68,20 +106,13 @@ function refresh() {
 function create(windowGetter) {
 	getWindow = windowGetter;
 
-	let image = nativeImage.createFromPath(iconPath());
-	if (image.isEmpty()) {
-		// Ship without a dedicated tray asset rather than failing to start;
-		// an empty image would give an invisible, unclickable tray item.
-		image = nativeImage.createFromNamedImage
-			? nativeImage.createFromNamedImage('NSStatusAvailable', [-1, 0, 1])
-			: image;
-	}
-	if (image.isEmpty()) {
+	const image = loadIcon(false);
+	if (!image) {
+		// Better no tray item than an invisible, unclickable one.
 		console.warn('[tray] no usable icon; skipping the tray item');
 		return null;
 	}
 
-	image.setTemplateImage(true);
 	tray = new Tray(image);
 	refresh();
 

@@ -45,6 +45,10 @@ contextBridge.exposeInMainWorld('tvHost', {
 		}
 	},
 	setTrayState: (state) => ipcRenderer.send('host:tray-state', state),
+	setAlwaysOnTop: (on) => ipcRenderer.send('window:set-always-on-top', on),
+	onAlwaysOnTop: (callback) => {
+		ipcRenderer.on('tray:set-always-on-top', (_event, on) => callback(!!on));
+	},
 	logError: (message) => ipcRenderer.send('host:log-error', message),
 
 	// --- preferences ---

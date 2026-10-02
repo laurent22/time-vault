@@ -175,3 +175,4 @@
 "drawer_projects_ctxMenu_showArchivedProjects" = "Show archived projects";
 "editProject_Archived" = "Archive";
 "editProject_ArchivedDescription" = "Tick this box once the project is finished in order to exclude it from the project lists and reports.";
+"mainWindow_ctxMenu_alwaysOnTop" = "Always on top";

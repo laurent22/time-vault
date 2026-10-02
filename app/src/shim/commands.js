@@ -67,7 +67,13 @@
 		const w = globalThis.gMainWindow;
 		if (!w || !host.setTrayState) return;
 
-		const running = w.projectEvent != undefined;
+		// `opened` is the capsule state, and it's the actual run flag: the
+		// capsule closes around the clock while timing and opens when
+		// stopped, which is why MainWindow shows the stop icon at opened
+		// == false. projectEvent is merely "a project is loaded" — true
+		// from startup — so using it left the tray permanently offering
+		// "Stop timer".
+		const running = !!w.projectEvent && w.opened === false;
 		const elapsed = running ? String(w.eventTimeText ? w.eventTimeText.data : '') : '';
 		const project = w.projectNameText ? String(w.projectNameText.data) : '';
 
