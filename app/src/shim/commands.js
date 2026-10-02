@@ -49,9 +49,9 @@
 			if (globalThis.Main && typeof Main.revealReportFolder === 'function') Main.revealReportFolder();
 		},
 
-		// A widget dragged off-screen, or onto a display that's since been
-		// disconnected, would otherwise be unreachable.
-		'menu:joplin-sync': () => { if (host.joplinSync) host.joplinSync(); },
+		// The sync runs automatically, so it has no command. Forgetting the
+		// token does: it's how a revoked authorisation is renewed, since the
+		// silent syncs won't prompt.
 		'menu:joplin-forget': () => { if (host.joplinForget) host.joplinForget(); },
 
 		'menu:about': () => { if (host.showAbout) host.showAbout(); },

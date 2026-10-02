@@ -39,7 +39,7 @@ globalThis.KON_PREFS_SCHEMA = {
 	"reportColumn6": {"type":"popup","defaultValue":"0","group":"report"},
 	"publishDailyReports": {"type":"checkbox","defaultValue":"1","group":"report"},
 	"reportDataDelimiter": {"type":"text","defaultValue":",","group":"report"},
-	"joplinSyncEnabled": {"type":"checkbox","defaultValue":"0","group":"joplin","title":"Sync to Joplin","description":"Writes your projects and entries to a \"Time Vault\" notebook after each timed entry. One-way: those notes are rewritten every time, so any changes made in Joplin are lost. Joplin must be running with the Web Clipper service enabled."},
+	"joplinSyncEnabled": {"type":"checkbox","defaultValue":"0","group":"joplin","title":"Sync to Joplin","description":"Keeps a \"Time Vault\" notebook up to date with your projects and entries, syncing automatically whenever anything changes. One-way: those notes are rewritten every time, so any changes made in Joplin are lost. Joplin must be running with the Web Clipper service enabled."},
 };
 
 globalThis.KON_PREF_GROUPS = {

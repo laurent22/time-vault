@@ -77,10 +77,11 @@ Object.assign(prefs, {
 	joplinSyncEnabled: {
 		type: 'checkbox', defaultValue: '0', group: 'joplin',
 		title: 'Sync to Joplin',
-		description: 'Writes your projects and entries to a "Time Vault" notebook '
-			+ 'after each timed entry. One-way: those notes are rewritten every '
-			+ 'time, so any changes made in Joplin are lost. Joplin must be running '
-			+ 'with the Web Clipper service enabled.',
+		description: 'Keeps a "Time Vault" notebook up to date with your projects '
+			+ 'and entries, syncing automatically whenever anything changes. '
+			+ 'One-way: those notes are rewritten every time, so any changes made '
+			+ 'in Joplin are lost. Joplin must be running with the Web Clipper '
+			+ 'service enabled.',
 	},
 });
 

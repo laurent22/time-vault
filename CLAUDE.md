@@ -191,6 +191,20 @@ false failure.
 `test/layout-probe.js` dumps rendered geometry so layout can be checked
 without a screenshot.
 
+**`tvHost` cannot be spied on.** `contextBridge.exposeInMainWorld` freezes the
+object it exposes, so `tvHost.someCall = fn` fails *silently* in the renderer —
+non-strict assignment to a frozen property is a no-op, not a throw. A test
+written that way asserts on a counter nothing ever increments and passes or
+fails for unrelated reasons. Expose a counter from the shim instead, as
+`shim/joplin.js` does with `KON_JOPLIN_SYNC_COUNT`.
+
+**A probe that boots `index.html` must register the IPC handlers.** The
+renderer calls `ipcRenderer.sendSync` for preferences and the app version
+during startup; with no listener those block forever and the probe hangs with
+no output at all. Use `test/run-app-tests.js` as the template rather than a
+fresh `BrowserWindow` — it registers `host`, `sql-host` and `window-host` and
+auto-answers the modals.
+
 The fixture `test/fixtures/Events.db3` is the real database the widget wrote in
 November 2007 (17 events, the schema of the day). The runner copies it before
 use so the committed file stays pristine.

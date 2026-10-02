@@ -56,9 +56,9 @@ Optional, and off by default. Turn it on in **Preferences → Joplin**, with Jop
 
 It writes a **Time Vault** notebook containing a Summary note and one note per project, each listing its entries as a table. The sync is **one way**: those notes are rewritten from the database every time, so anything edited in Joplin is lost. Each note says so at the top.
 
-Once enabled it syncs after each timed entry and when the app quits. There's also **Reports → Sync to Joplin Now**, and the same on the widget's right-click menu, for syncing on the spot.
+After that it is entirely automatic, with no "sync now" command: it syncs at startup, whenever anything in the projects or entries changes, and on quit. Changes are watched at the single point every database write passes through, so nothing is missed, and a burst of them — saving an entry is several statements — collapses into one sync a few seconds later.
 
-Those automatic syncs never interrupt: if Joplin isn't running, or authorisation has been revoked, they're skipped silently rather than raising a dialog mid-task. Use one of the menu commands to see what went wrong.
+The automatic syncs never interrupt: if Joplin isn't running, or authorisation has been revoked, they're skipped silently rather than raising a dialog mid-task. **Reports → Forget Joplin Authorisation** clears the stored token, so switching the setting off and on again will ask for a new one.
 
 The Joplin port is found the same way the Web Clipper finds it — probing ten ports from 41184 for a release build and 27583 for a development one — so it works against either without configuration.
 

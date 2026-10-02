@@ -52,9 +52,11 @@ function install(getWindow, { joplinEnabled = false } = {}) {
 			submenu: [
 				{ label: 'Publish Reports Now', click: send('menu:publish-reports') },
 				{ label: 'Reveal Report Folder', click: send('menu:reveal-reports') },
+				// The sync itself is automatic, so there's no command for it.
+				// Forgetting the token is the one thing that needs asking for:
+				// without it a revoked authorisation can't be renewed.
 				...(joplinEnabled ? [
 					{ type: 'separator' },
-					{ label: 'Sync to Joplin Now', click: send('menu:joplin-sync') },
 					{ label: 'Forget Joplin Authorisation', click: send('menu:joplin-forget') },
 				] : []),
 			],

@@ -147,6 +147,69 @@ app.whenReady().then(async () => {
 		return 1;
 	})()`);
 
+	// The Joplin triggers, which need awaiting: the sync is debounced, so
+	// these can't be folded into the synchronous checks above.
+	//
+	// The assertions count scheduled syncs via KON_JOPLIN_SYNC_COUNT rather
+	// than spying on tvHost.joplinSync: contextBridge freezes tvHost, so an
+	// assignment there fails silently and the test measures nothing.
+	await win.webContents.executeJavaScript(`(async () => {
+		const r = window.__shimTestResults;
+		const check = async (name, fn) => {
+			try { const m = await fn(); r.push({ name, ok: m === undefined || m === true, msg: m === true ? undefined : (m && String(m)) }); }
+			catch (e) { r.push({ name, ok: false, msg: 'threw: ' + e.message }); }
+		};
+
+		globalThis.KON_JOPLIN_DEBOUNCE_MS = 120;
+		const settle = () => new Promise((res) => setTimeout(res, 400));
+		const counted = () => globalThis.KON_JOPLIN_SYNC_COUNT;
+		let base = 0;
+		const reset = () => { base = counted(); };
+		const since = () => counted() - base;
+
+		const write = () => gDatabase.db.exec('UPDATE Projects SET Name = Name WHERE ID = 1');
+
+		await check('every database write is watched at one chokepoint', () => {
+			if (!Database.prototype.__joplinWatched) return 'Database.exec was never wrapped';
+		});
+
+		await check('a data change schedules a sync', async () => {
+			preferences.joplinSyncEnabled.value = '1';
+			reset();
+			write();
+			if (since() !== 0) return 'synced synchronously; it should be debounced';
+			await settle();
+			if (since() !== 1) return 'expected 1 sync, got ' + since();
+		});
+
+		await check('a burst of changes collapses into one sync', async () => {
+			reset();
+			for (let i = 0; i < 6; i++) write();
+			await settle();
+			if (since() !== 1) return '6 writes produced ' + since() + ' syncs';
+		});
+
+		await check('reads and schema statements do not sync', async () => {
+			reset();
+			gDatabase.db.query('SELECT * FROM Projects');
+			// Contains the word DELETE but changes nothing.
+			gDatabase.db.exec('PRAGMA journal_mode = DELETE');
+			await settle();
+			if (since() !== 0) return 'a SELECT/PRAGMA triggered ' + since() + ' syncs';
+		});
+
+		await check('nothing syncs while the setting is off', async () => {
+			preferences.joplinSyncEnabled.value = '0';
+			reset();
+			write();
+			await settle();
+			if (since() !== 0) return 'synced ' + since() + ' times while disabled';
+		});
+
+		delete globalThis.KON_JOPLIN_DEBOUNCE_MS;
+		return 1;
+	})()`);
+
 	const results = JSON.parse(
 		await win.webContents.executeJavaScript('JSON.stringify(window.__shimTestResults || [])'),
 	);
