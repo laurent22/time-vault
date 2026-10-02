@@ -60,6 +60,20 @@
 	document.addEventListener('mousedown', (e) => {
 		if (e.button !== 0) { endDrag(false); return; }
 		if (isInteractive(e.target)) return;
+
+		// Only the visible skin drags the window. The OS window is a rectangle
+		// fitted to the widget's bounding box, so it covers transparent
+		// regions the rounded corners and the gap beside the capsule leave
+		// behind, and a transparent pixel of an <img> still hit-tests. Without
+		// this those invisible parts drag too, which feels like grabbing the
+		// window out of thin air.
+		//
+		// This tests the event's own target rather than re-hit-testing the
+		// coordinates: the two disagree for a synthesised event, whose
+		// clientX/clientY default to 0,0 — and dispatching straight at an
+		// element is exactly how the drag is driven from a test.
+		if (!isPaintedTarget(e.target, e.clientX, e.clientY)) return;
+
 		dragging = true;
 		movedWhileDown = false;
 		const useScreen = e.screenX !== 0 || e.screenY !== 0;
@@ -160,13 +174,8 @@
 	alphaCanvas.height = 1;
 	const alphaCtx = alphaCanvas.getContext('2d', { willReadFrequently: true });
 
-	function isOpaqueAt(x, y) {
-		const el = document.elementFromPoint(x, y);
-		if (!el || el === document.documentElement || el === document.body) return false;
-
-		// Text and canvases count as solid wherever they are.
-		if (el.tagName !== 'IMG') return true;
-
+	// Whether this image is painted at the given page coordinates.
+	function isOpaqueAtOn(el, x, y) {
 		const rect = el.getBoundingClientRect();
 		if (rect.width === 0 || rect.height === 0) return false;
 
@@ -185,6 +194,16 @@
 		}
 	}
 
+	function isOpaqueAt(x, y) {
+		const el = document.elementFromPoint(x, y);
+		if (!el || el === document.documentElement || el === document.body) return false;
+
+		// Text and canvases count as solid wherever they are.
+		if (el.tagName !== 'IMG') return true;
+
+		return isOpaqueAtOn(el, x, y);
+	}
+
 	document.addEventListener('mousemove', (e) => {
 		// Never start ignoring mid-drag, or the window would be dropped.
 		if (dragging) return;
@@ -192,6 +211,23 @@
 	});
 
 	globalThis.konSetClickThrough = setIgnore;
+
+	// Whether a press on this element should count as pressing the skin.
+	//
+	// The page itself is never the skin: a press landing on <html> or <body>
+	// is in one of the transparent regions the fitted window covers. An image
+	// is only the skin where it's actually painted, so its alpha is sampled.
+	// Anything else — a frame, a canvas, text — counts as solid wherever it is.
+	function isPaintedTarget(target, x, y) {
+		if (!target || target === document.documentElement || target === document.body) return false;
+		if (target.tagName !== 'IMG') return true;
+		return isOpaqueAtOn(target, x, y);
+	}
+
+	// Exposed so the tests can assert which parts of the window drag and
+	// which click through; both are decided by these predicates.
+	globalThis.konIsOpaqueAtForTest = isOpaqueAt;
+	globalThis.konIsPaintedTargetForTest = isPaintedTarget;
 
 	// --- window sizing ------------------------------------------------------
 	//

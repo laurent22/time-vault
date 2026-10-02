@@ -30,27 +30,43 @@
 	globalThis.konJoplinEnabled = enabled;
 	globalThis.konJoplinSetEnabled = (on) => { setPref('joplinSyncEnabled', on); publish(); };
 
-	// Tracks the last value we told the main process about, so switching the
-	// setting on can be told apart from it merely being on already. Only the
-	// transition should authorise; doing it whenever the feature is enabled
-	// would prompt on every launch.
-	let lastPublished = null;
-
 	function publish() {
 		const on = enabled();
-		const turnedOn = on && lastPublished === false;
-		lastPublished = on;
 		if (host.joplinSetEnabled) host.joplinSetEnabled(on);
-
-		// Switching it on is the moment to get authorised: the user has just
-		// asked for the feature, so Joplin's prompt is expected rather than an
-		// interruption. Every other trigger is silent and would otherwise be
-		// skipped forever, with no way left to authorise at all.
-		if (turnedOn && host.joplinSync) {
-			host.joplinSync({ interactive: true })
-				.catch((e) => console.warn('[joplin] authorisation failed:', e.message));
-		}
+		if (on) authoriseIfNeeded();
 	}
+
+	// Asks for authorisation when the feature is on but has no usable token.
+	//
+	// The condition is "enabled and not authorised", not "just switched on":
+	// keying off the transition meant a profile that already had the setting
+	// enabled — because it was switched on before authorisation ever
+	// succeeded — took the "already on" branch on every launch and could
+	// never prompt again. Every other trigger is deliberately silent, so that
+	// left no way to authorise at all.
+	//
+	// Guarded by a promise rather than a boolean so two triggers arriving
+	// together produce one prompt.
+	let authorising = null;
+
+	function authoriseIfNeeded() {
+		if (!enabled() || !host.joplinStatus || !host.joplinSync) return Promise.resolve(false);
+		if (authorising) return authorising;
+
+		authorising = host.joplinStatus().then((s) => {
+			// Joplin not running isn't something to nag about: the silent
+			// syncs skip, and the next launch tries again.
+			if (!s || !s.running || s.authorised) return false;
+			return host.joplinSync({ interactive: true }).then(() => true);
+		}).catch((e) => {
+			console.warn('[joplin] authorisation failed:', e.message);
+			return false;
+		}).finally(() => { authorising = null; });
+
+		return authorising;
+	}
+
+	globalThis.konJoplinAuthoriseIfNeeded = authoriseIfNeeded;
 
 	// Syncs quietly: no dialogs, no prompt. If authorisation is missing the
 	// sync is skipped rather than demanding attention mid-task.
@@ -127,7 +143,12 @@
 		// was closed — including edits made to the database by hand. Delayed
 		// past boot so it doesn't compete with loading the widget, and so the
 		// schema setup that runs on a fresh database doesn't trigger it twice.
-		setTimeout(() => syncQuietly('startup'), 5000);
+		//
+		// Authorise first if there's no token: otherwise this sync, like every
+		// other, skips silently and the feature never starts working.
+		setTimeout(() => {
+			authoriseIfNeeded().then(() => syncQuietly('startup'));
+		}, 5000);
 	});
 
 	// Sync on quit. beforeunload is synchronous, so this can only start the

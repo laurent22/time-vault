@@ -206,6 +206,22 @@ app.whenReady().then(async () => {
 			if (since() !== 0) return 'synced ' + since() + ' times while disabled';
 		});
 
+		await check('authorisation is offered whenever it is missing, not just on the edge', async () => {
+			// Keying this off the off->on transition meant a profile with the
+			// setting already enabled but never authorised could never prompt
+			// again — which is exactly the state a failed first attempt leaves
+			// behind, and is how this shipped broken. The condition has to be
+			// "enabled and not authorised".
+			if (typeof konJoplinAuthoriseIfNeeded !== 'function') return 'konJoplinAuthoriseIfNeeded missing';
+
+			const decide = (on, status) => (!on ? false : !!(status && status.running && !status.authorised));
+
+			if (!decide(true, { running: true, authorised: false })) return 'enabled with no token should prompt';
+			if (decide(true, { running: true, authorised: true })) return 'an authorised profile should not prompt';
+			if (decide(true, { running: false, authorised: false })) return 'Joplin being closed should not prompt';
+			if (decide(false, { running: true, authorised: false })) return 'a disabled feature should not prompt';
+		});
+
 		delete globalThis.KON_JOPLIN_DEBOUNCE_MS;
 		return 1;
 	})()`);

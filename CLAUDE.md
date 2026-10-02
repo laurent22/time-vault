@@ -136,6 +136,16 @@ still hit-tests; and window fitting must measure in the stage's own coordinate
 space, or the offset that uncovers content above the origin cancels itself out
 and oscillates forever.
 
+**Dragging must sample alpha too, not just click-through.** The OS window is a
+rectangle fitted to the widget's bounding box, so it covers the transparent
+regions the rounded corners and the gap beside the capsule leave behind — and
+those dragged the window, which feels like grabbing it out of thin air. The
+press is tested against `e.target`, not by re-hit-testing `clientX/clientY`:
+the two disagree for a synthesised event, whose coordinates default to `0,0`,
+and dispatching straight at an element is how the drag is driven from a test.
+Testing the coordinates instead makes every drag test fail while the real
+widget still works.
+
 **`visible` must clip as well as hide.** CSS `visibility` is inherited but a
 descendant can set it back to `visible`, which Konfabulator never allowed —
 the drawer's dropdown kept painting below the collapsed widget. Hidden

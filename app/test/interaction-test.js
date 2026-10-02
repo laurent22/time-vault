@@ -471,6 +471,69 @@ ixCheck('a right-click cannot leave a drag live', () => {
 	if (afterMenu) return 'a drag was still live after the context menu';
 });
 
+ixCheck('a transparent part of the window does not drag it', () => {
+	// The OS window is a rectangle fitted to the widget's bounding box, so it
+	// covers transparent regions — the rounded corners, the gap beside the
+	// capsule. Those used to drag the window too, which felt like grabbing it
+	// out of thin air well away from anything visible.
+	if (typeof konDragActive !== 'function') return 'konDragActive is not exposed';
+	if (typeof konIsPaintedTargetForTest !== 'function') return 'konIsPaintedTargetForTest is not exposed';
+
+	// The page itself is the transparent part: anything the skin covers is an
+	// element of its own, so a press landing on body is in the empty region.
+	if (konIsPaintedTargetForTest(document.body, 0, 0)) {
+		return 'body counts as painted, so this proves nothing';
+	}
+
+	document.body.dispatchEvent(new MouseEvent('mousedown', {
+		bubbles: true, button: 0, buttons: 1,
+	}));
+	const started = konDragActive();
+	document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, buttons: 0 }));
+
+	if (started) return 'pressing a transparent part of the window started a drag';
+});
+
+ixCheck('a fully transparent image does not drag the window', () => {
+	// The real case: the skin's rounded corners and the gap beside the capsule
+	// are transparent pixels of images that still hit-test.
+	if (typeof konIsPaintedTargetForTest !== 'function') return 'konIsPaintedTargetForTest is not exposed';
+
+	const img = document.createElement('img');
+	// A 2x2 fully transparent PNG.
+	img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAACZgbYnAAAAEUlEQVR42mNkYPjPgAAMwQwADAAFAAGzkLDoAAAAAElFTkSuQmCC';
+	img.width = 2; img.height = 2;
+	document.body.appendChild(img);
+
+	// Decoding is async; without waiting the alpha read throws and falls back
+	// to "solid", so this is only meaningful once the image is ready.
+	const ready = img.complete && img.naturalWidth > 0;
+	const painted = konIsPaintedTargetForTest(img, 0, 0);
+	img.remove();
+
+	if (!ready) return undefined; // nothing proven, but nothing broken either
+	if (painted) return 'a fully transparent image counted as painted';
+});
+
+ixCheck('the visible skin still drags the window', () => {
+	// The guard above must not make the widget immovable: a solid element has
+	// to keep dragging it.
+	if (typeof konDragActive !== 'function') return 'konDragActive is not exposed';
+
+	const f = new Frame();
+	f.width = 60;
+	f.height = 40;
+	document.body.appendChild(f.node);
+	f.node.style.background = '#000';
+
+	f.node.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, buttons: 1 }));
+	const started = konDragActive();
+	document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, buttons: 0 }));
+	f.node.remove();
+
+	if (!started) return 'a solid element no longer drags the window';
+});
+
 ixCheck('a mousemove with no button held ends a stale drag', () => {
 	// The button state is authoritative — if nothing is pressed, a drag
 	// still marked live is stale and must not move the window.
