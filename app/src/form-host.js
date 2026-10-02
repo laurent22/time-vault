@@ -190,10 +190,17 @@ function register() {
 			message: String(message == null ? '' : message),
 			buttons: labels.map(String),
 			defaultId: 0,
+			// Escape should mean the last button, which is the safe one in
+			// every call site here ("No" / "Cancel").
+			cancelId: labels.length - 1,
 			noLink: true,
 		});
 
-		event.returnValue = index;
+		// Konfabulator numbered the buttons from 1, and every call site
+		// relies on it — "if (answer == 2) return;" is how the widget
+		// cancels a destructive action. Returning Electron's 0-based index
+		// made "No" read as 1, so Delete All deleted everything anyway.
+		event.returnValue = index + 1;
 	});
 }
 

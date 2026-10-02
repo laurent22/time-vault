@@ -41,7 +41,13 @@ app.whenReady().then(async () => {
 	ipcMain.on('host:form', (event, items) => {
 		event.returnValue = items.map((it) => String(it.defaultValue ?? ''));
 	});
-	ipcMain.on('host:alert', (event) => { event.returnValue = 0; });
+	// Mirrors the real host, which converts Electron's 0-based index to the
+	// 1-based one Konfabulator used. Returning 0 here would hide the very
+	// off-by-one that made Delete All ignore "No".
+	ipcMain.on('host:alert', (event, _message, buttons) => {
+		const count = Array.isArray(buttons) && buttons.length ? buttons.length : 1;
+		event.returnValue = count; // the last button, 1-based
+	});
 
 	const win = new BrowserWindow({
 		show: false,

@@ -285,11 +285,18 @@
 
 	globalThis.konFitWindowToContent = fitWindowToContent;
 
-	// The layout settles over a few frames (images decode, the drawer
-	// animates), and resizing is cheap, so re-check periodically rather than
-	// trying to hook every mutation in the ported code.
+	// Re-check on every animation frame rather than on a timer. A 250ms poll
+	// made resizing visibly jerky: the drag is smooth but the window only
+	// caught up four times a second. fitWindowToContent exits early when
+	// nothing changed, so the per-frame cost is a bounds walk, and rAF stops
+	// entirely while the window is hidden.
 	document.addEventListener('kon-widget-ready', () => {
 		fitWindowToContent();
-		setInterval(fitWindowToContent, 250);
+
+		const tick = () => {
+			fitWindowToContent();
+			requestAnimationFrame(tick);
+		};
+		requestAnimationFrame(tick);
 	});
 })();

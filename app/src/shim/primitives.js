@@ -229,11 +229,28 @@ class KonObject {
 
 	_reorderRelativeTo(sibling, where) {
 		const parent = this._parent;
-		if (!parent || !sibling || sibling._parent !== parent) return;
+		if (!parent) return;
 
 		const list = parent.subviews;
 		const from = list.indexOf(this);
 		if (from !== -1) list.splice(from, 1);
+
+		// A null sibling means the extremes of the stack — WidGUI calls
+		// orderAbove(null) to bring a button's label in front of the
+		// background it just drew. Ignoring that left every TextButton and
+		// DropdownList label painted underneath its own artwork, which is
+		// why the drawer's tabs looked like blank white buttons.
+		if (!sibling || sibling._parent !== parent) {
+			if (where === 'above') {
+				list.push(this);
+				parent.node.appendChild(this.node);
+			} else {
+				list.unshift(this);
+				parent.node.prepend(this.node);
+			}
+			return;
+		}
+
 		const target = list.indexOf(sibling);
 		list.splice(where === 'above' ? target + 1 : target, 0, this);
 
@@ -450,6 +467,42 @@ class Frame extends KonObject {
 	// the frame is in the document — the layout runs during construction.
 	_measure() {
 		return this._measureChildren();
+	}
+
+	// Konfabulator scrolled a frame's contents when a ScrollBar was attached
+	// this way; the drawer uses it for both the event list and the project
+	// list. Without it a long list simply ran off the bottom of the drawer.
+	get vScrollBar() { return this._vScrollBar || null; }
+	set vScrollBar(bar) {
+		this._vScrollBar = bar || null;
+		if (!bar) return;
+
+		// Scroll by shifting the frame's own scroll origin rather than
+		// writing transforms onto the children — they use transform for
+		// alignment and rotation, and overwriting it would undo both.
+		this.node.style.overflow = 'hidden';
+		const apply = () => {
+			this.node.scrollTop = Math.max(0, Number(bar.value) || 0);
+		};
+
+		bar.onScroll = apply;
+
+		// The wheel scrolls the frame under the pointer, as it would in any
+		// list; Konfabulator did this for a scrollable frame automatically.
+		this.node.addEventListener('wheel', (e) => {
+			const content = this._measureChildren().height;
+			const visible = this._height != null ? this._height : content;
+			const max = Math.max(0, content - visible);
+			if (max <= 0) return;
+
+			e.preventDefault();
+			const next = Math.min(max, Math.max(0, (Number(bar.value) || 0) + e.deltaY));
+			bar.maximum = max;
+			bar.value = next;
+			apply();
+		}, { passive: false });
+
+		apply();
 	}
 }
 

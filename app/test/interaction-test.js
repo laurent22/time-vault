@@ -342,3 +342,68 @@ ixCheck('text measures correctly while off-document', () => {
 	if (!(t.height > 0)) return `detached height was ${t.height}`;
 	if (!(t.width > 0)) return `detached width was ${t.width}`;
 });
+
+ixCheck('alert returns a 1-based button index', () => {
+	// Konfabulator numbered buttons from 1 and the widget depends on it:
+	// "if (answer == 2) return;" is how Delete All cancels. Returning
+	// Electron's 0-based index made "No" read as 1, so it deleted anyway.
+	// The runner's stub mirrors the host, which adds one.
+	const n = alert('test', 'Yes', 'No');
+	if (n < 1) return `got ${n}; the first button must be 1, not 0`;
+});
+
+ixCheck('orderAbove(null) brings an element to the front', () => {
+	// WidGUI calls this to lift a button's label above the background it
+	// just drew. Ignoring a null sibling left every TextButton label painted
+	// underneath its own artwork — the drawer's tabs looked blank.
+	const parent = new Frame();
+	const label = new Frame();
+	const background = new Frame();
+	parent.appendChild(label);
+	parent.appendChild(background);
+
+	if (parent.subviews[1] !== background) return 'setup: background should start last';
+	label.orderAbove(null);
+
+	if (parent.subviews[parent.subviews.length - 1] !== label) {
+		return 'the label is not last in the subview list';
+	}
+	if (parent.node.lastElementChild !== label.node) {
+		return 'the label is not last in the DOM, so it still paints underneath';
+	}
+});
+
+ixCheck('orderBelow(null) sends an element to the back', () => {
+	const parent = new Frame();
+	const a = new Frame();
+	const b = new Frame();
+	parent.appendChild(a);
+	parent.appendChild(b);
+	b.orderBelow(null);
+	if (parent.node.firstElementChild !== b.node) return 'b should now paint first';
+});
+
+ixCheck('a frame with a scrollbar can scroll its contents', () => {
+	// MainDrawer attaches one with infoFrame.vScrollBar = ...; without it a
+	// long event list just ran off the bottom of the drawer.
+	const frame = new Frame();
+	frame.width = 100;
+	frame.height = 50;
+
+	const tall = new Frame();
+	tall.width = 100;
+	tall.height = 200;
+	frame.appendChild(tall);
+
+	const bar = new ScrollBar();
+	frame.vScrollBar = bar;
+
+	document.body.appendChild(frame.node);
+	bar.value = 40;
+	if (typeof bar.onScroll === 'function') bar.onScroll();
+	const scrolled = frame.node.scrollTop;
+	frame.node.remove();
+
+	if (frame.vScrollBar !== bar) return 'the scrollbar was not attached';
+	if (scrolled !== 40) return `scrollTop is ${scrolled}, expected 40`;
+});

@@ -259,10 +259,16 @@
 		return index;
 	};
 
+	// Returns the 1-based index of the button pressed, as Konfabulator did.
+	// The widget writes "if (answer == 2) return;" to cancel destructive
+	// actions, so this numbering is load-bearing.
 	globalThis.alert = function alert(message, ...buttons) {
 		if (!host.alert) {
 			console.warn('[alert]', message);
-			return 0;
+			// Without a dialog, answer with the last button — the safe one
+			// at every call site ("No" / "Cancel") — rather than confirming
+			// a deletion no one was asked about.
+			return buttons.length || 1;
 		}
 		return host.alert(message, buttons);
 	};
