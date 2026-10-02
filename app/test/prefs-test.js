@@ -110,6 +110,26 @@ prefCheck('widget exposes name and version', () => {
 	if (!/^\d+\.\d+/.test(widget.version)) return `version looks wrong: ${widget.version}`;
 });
 
+prefCheck('every locale ships its strings file', () => {
+	// These were silently missing once: the directories were copied but the
+	// files inside weren't, so every label rendered as its raw key.
+	const missing = [];
+	for (const code of ['en', 'fr', 'tr']) {
+		const p = `Resources/${code}/Localizable.strings`;
+		if (!filesystem.itemExists(p)) { missing.push(code); continue; }
+		const lines = filesystem.readFile(p, true);
+		if (!lines || lines.length < 50) missing.push(`${code} (only ${lines ? lines.length : 0} lines)`);
+	}
+	if (missing.length) return `missing or truncated: ${missing.join(', ')}`;
+});
+
+prefCheck('a known string resolves rather than echoing its key', () => {
+	const lines = filesystem.readFile('Resources/en/Localizable.strings', true);
+	const hit = lines.find((l) => l.includes('global_defaultProjectName'));
+	if (!hit) return 'global_defaultProjectName is not in the en strings file';
+	if (!hit.includes('Default project')) return `unexpected value: ${hit}`;
+});
+
 prefCheck('includeFile is a harmless no-op', () => {
 	// Main.js calls this 25 times; load order comes from the script tags.
 	includeFile('Resources/WidGUI/Scripts/Widgui_Manager.js');

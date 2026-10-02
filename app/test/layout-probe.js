@@ -34,7 +34,12 @@ app.whenReady().then(async () => {
 	});
 
 	await win.loadFile(path.join(__dirname, '..', 'src', 'index.html'));
-	await new Promise((r) => setTimeout(r, 2500));
+	await win.webContents.executeJavaScript(`new Promise((resolve) => {
+		if (window.KON_WIDGET_READY) return resolve(true);
+		document.addEventListener('kon-widget-ready', () => resolve(true), { once: true });
+		setTimeout(() => resolve(false), 15000);
+	})`);
+	await new Promise((r) => setTimeout(r, 800));
 
 	const report = JSON.parse(await win.webContents.executeJavaScript(`JSON.stringify((() => {
 		const out = { visible: [], offscreen: [], zeroSize: [], brokenImages: [] };

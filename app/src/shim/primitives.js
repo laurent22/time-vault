@@ -233,6 +233,14 @@ class Image extends KonObject {
 		this.node.draggable = false;
 	}
 
+	// The preloaded, already-decoded element for this source, if there is
+	// one. Canvas drawing uses this rather than our own <img>, which may not
+	// have decoded yet.
+	get decodedNode() {
+		const table = globalThis.KON_DECODED_IMAGES;
+		return table ? table.get(assetKey(this._src)) : undefined;
+	}
+
 	get src() { return this._src; }
 	set src(v) {
 		this._src = v == null ? '' : String(v);
@@ -409,8 +417,16 @@ class Canvas extends KonObject {
 
 const contextCache = new WeakMap();
 
+// Canvas drawing needs a decoded bitmap. The shim Image's own <img> element
+// may not have decoded yet — the original composites in its constructors —
+// so prefer the preloaded copy, which is guaranteed ready.
 function unwrap(v) {
-	return v && v.node ? v.node : v;
+	if (!v) return v;
+	if (v instanceof Image) {
+		const decoded = v.decodedNode;
+		if (decoded) return decoded;
+	}
+	return v.node ? v.node : v;
 }
 
 function wrapContext(ctx) {
@@ -459,6 +475,11 @@ function lookupImageSize(src) {
 	const table = globalThis.KON_IMAGE_SIZES;
 	return (table && table[assetKey(src)]) || null;
 }
+
+// The DOM's own Image constructor, kept before the shim shadows it. The
+// preloader needs a real <img> to decode files; `new Image()` would now
+// build a Konfabulator one.
+globalThis.NativeImage = globalThis.Image;
 
 // Konfabulator's drawing primitives are globals in the original source.
 Object.assign(globalThis, { Frame, Image, Text, Canvas });

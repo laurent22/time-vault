@@ -42,7 +42,14 @@ app.whenReady().then(async () => {
 
 	await win.loadFile(path.join(__dirname, '..', 'src', 'index.html'));
 	// Give deferred work (image loads, timers) a chance to throw too.
-	await new Promise((r) => setTimeout(r, 2000));
+	// The widget code is loaded asynchronously now (the skin has to decode
+	// first), so wait for the ready signal rather than a fixed delay.
+	await win.webContents.executeJavaScript(`new Promise((resolve) => {
+		if (window.KON_WIDGET_READY) return resolve(true);
+		document.addEventListener('kon-widget-ready', () => resolve(true), { once: true });
+		setTimeout(() => resolve(false), 15000);
+	})`);
+	await new Promise((r) => setTimeout(r, 800));
 
 	const state = JSON.parse(await win.webContents.executeJavaScript(`JSON.stringify((() => {
 		const stage = document.getElementById('stage');
