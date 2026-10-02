@@ -54,8 +54,11 @@
 		// one — treating them as interactive would make the list undraggable.
 	}
 
+	// Any non-left press cancels an in-progress drag rather than being
+	// ignored: a right-click opens a native menu, which swallows the mouseup
+	// that would otherwise have ended it.
 	document.addEventListener('mousedown', (e) => {
-		if (e.button !== 0) return;
+		if (e.button !== 0) { endDrag(false); return; }
 		if (isInteractive(e.target)) return;
 		dragging = true;
 		movedWhileDown = false;
@@ -76,9 +79,26 @@
 		const x = useScreen ? e.screenX : e.clientX;
 		const y = useScreen ? e.screenY : e.clientY;
 
+		// The button state is authoritative: if nothing is held any more, the
+		// mouseup was swallowed — by a native menu, or by the pointer leaving
+		// the window — and this is a stale drag. Ending it here stops the
+		// window snapping to wherever the cursor happens to be next.
+		if (e.buttons !== undefined && (e.buttons & 1) === 0) {
+			endDrag(movedWhileDown);
+			return;
+		}
+
 		const dx = x - lastScreenX;
 		const dy = y - lastScreenY;
 		if (dx === 0 && dy === 0) return;
+
+		// A jump this large isn't a drag — it's the cursor having moved while
+		// events weren't being delivered. Re-anchor instead of lurching.
+		if (Math.abs(dx) > 200 || Math.abs(dy) > 200) {
+			lastScreenX = x;
+			lastScreenY = y;
+			return;
+		}
 
 		movedWhileDown = true;
 		lastScreenX = x;
@@ -86,11 +106,21 @@
 		if (host.moveBy) host.moveBy(dx, dy);
 	}, true);
 
-	document.addEventListener('mouseup', () => {
+	function endDrag(save) {
 		if (!dragging) return;
 		dragging = false;
-		if (movedWhileDown) saveWindowLocation();
-	}, true);
+		if (save) saveWindowLocation();
+		movedWhileDown = false;
+	}
+
+	document.addEventListener('mouseup', () => endDrag(movedWhileDown), true);
+
+	// A context menu or a drag that leaves the window both end it: in either
+	// case the mouseup is delivered somewhere else, and a drag left live
+	// would resume from a stale anchor the next time the cursor moves.
+	document.addEventListener('contextmenu', () => endDrag(movedWhileDown), true);
+	globalThis.addEventListener('blur', () => endDrag(movedWhileDown));
+	document.addEventListener('mouseleave', () => endDrag(movedWhileDown));
 
 	// The original stores the window position in a preference as "x,y" and
 	// restores it on the next launch.
@@ -103,6 +133,9 @@
 	}
 
 	globalThis.konSaveWindowLocation = saveWindowLocation;
+	// Exposed so the tests can assert the drag state directly rather than
+	// inferring it from whether the window moved.
+	globalThis.konDragActive = () => dragging;
 
 	// --- click-through ------------------------------------------------------
 	//

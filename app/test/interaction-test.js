@@ -450,3 +450,44 @@ ixCheck('contextMenuItems is cleared before each handler runs', () => {
 
 	if (seen !== 0) return `the second handler saw ${seen} stale items`;
 });
+
+ixCheck('a right-click cannot leave a drag live', () => {
+	// A native context menu swallows the mouseup. If the drag stayed live,
+	// the next mouse movement snapped the window to the cursor — which is
+	// what happened after picking anything from the widget's menu.
+	//
+	// konDragActive reports the flag directly, so this asserts the state
+	// rather than inferring it from side effects.
+	if (typeof konDragActive !== 'function') return 'konDragActive is not exposed';
+
+	const f = new Frame();
+	document.body.appendChild(f.node);
+
+	f.node.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2, buttons: 2 }));
+	f.node.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }));
+	const afterMenu = konDragActive();
+
+	f.node.remove();
+	if (afterMenu) return 'a drag was still live after the context menu';
+});
+
+ixCheck('a mousemove with no button held ends a stale drag', () => {
+	// The button state is authoritative — if nothing is pressed, a drag
+	// still marked live is stale and must not move the window.
+	if (typeof konDragActive !== 'function') return 'konDragActive is not exposed';
+
+	const f = new Frame();
+	document.body.appendChild(f.node);
+
+	f.node.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, buttons: 1 }));
+	const started = konDragActive();
+
+	document.dispatchEvent(new MouseEvent('mousemove', {
+		bubbles: true, clientX: 300, clientY: 300, screenX: 300, screenY: 300, buttons: 0,
+	}));
+	const afterRelease = konDragActive();
+
+	f.node.remove();
+	if (!started) return 'the drag never started, so this proves nothing';
+	if (afterRelease) return 'a buttonless mousemove left the drag live';
+});
