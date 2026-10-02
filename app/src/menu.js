@@ -9,7 +9,9 @@
 const { app, Menu, shell } = require('electron');
 const aboutHost = require('./about-host');
 
-function install(getWindow) {
+// joplinEnabled reflects the preference; the menu is rebuilt when it
+// changes, so the Joplin commands only appear once the feature is on.
+function install(getWindow, { joplinEnabled = false } = {}) {
 	const send = (channel) => () => {
 		const win = getWindow();
 		if (win && !win.isDestroyed()) win.webContents.send(channel);
@@ -50,9 +52,11 @@ function install(getWindow) {
 			submenu: [
 				{ label: 'Publish Reports Now', click: send('menu:publish-reports') },
 				{ label: 'Reveal Report Folder', click: send('menu:reveal-reports') },
-				{ type: 'separator' },
-				{ label: 'Sync to Joplin', click: send('menu:joplin-sync') },
-				{ label: 'Forget Joplin Authorisation', click: send('menu:joplin-forget') },
+				...(joplinEnabled ? [
+					{ type: 'separator' },
+					{ label: 'Sync to Joplin Now', click: send('menu:joplin-sync') },
+					{ label: 'Forget Joplin Authorisation', click: send('menu:joplin-forget') },
+				] : []),
 			],
 		},
 		{

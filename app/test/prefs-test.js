@@ -14,9 +14,31 @@ function prefCheck(name, fn) {
 	}
 }
 
-prefCheck('all 32 preferences from the .kon are present', () => {
-	const n = Object.keys(KON_PREFS_SCHEMA).length;
-	if (n !== 32) return `expected 32 declared preferences, got ${n}`;
+prefCheck('every preference declared in the .kon is present', () => {
+	// The port adds settings of its own, so a total would be brittle; what
+	// matters is that none of the original 32 went missing.
+	const declared = [
+		'lastSelectedProject', 'lastRightPartWidth', 'lastDrawerHeight', 'windowLocation',
+		'lastDrawerWidth', 'lastSelectedProjectID', 'lastSelectedTaskID', 'showArchivedProjects',
+		'locale', 'expandStyle', 'enableAutoSave', 'restartOnProjectChange', 'useTrayIcon',
+		'checkForNewVersion', 'colorScheme', 'glassColor1', 'glassColor2', 'headerFontColor',
+		'normalFontColor', 'numberDateFormat', 'useAmpm', 'dataFolder', 'publishReports',
+		'reportColumn0', 'reportColumn1', 'reportColumn2', 'reportColumn3', 'reportColumn4',
+		'reportColumn5', 'reportColumn6', 'publishDailyReports', 'reportDataDelimiter',
+	];
+	const missing = declared.filter((n) => !(n in KON_PREFS_SCHEMA));
+	if (missing.length) return `missing from the schema: ${missing.join(', ')}`;
+	if (declared.length !== 32) return `the .kon declares 32; this list has ${declared.length}`;
+});
+
+prefCheck('the port\'s own settings are off by default', () => {
+	// Joplin sync talks to another app and needs authorisation, so it must
+	// be opt-in rather than something that just starts happening.
+	for (const name of ['joplinSyncEnabled', 'joplinSyncOnStop', 'joplinSyncOnQuit']) {
+		const p = KON_PREFS_SCHEMA[name];
+		if (!p) return `${name} is not in the schema`;
+		if (p.defaultValue !== '0') return `${name} defaults to ${p.defaultValue}, should be 0`;
+	}
 });
 
 prefCheck('defaults come from the .kon manifest', () => {

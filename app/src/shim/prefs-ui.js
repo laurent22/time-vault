@@ -35,7 +35,8 @@
 		for (const key of Object.keys(groups)) {
 			const g = groups[key];
 			// Main.js sets .title from "preferenceGroup_<key>" at load.
-			out.push({ key, title: g.title || loc(`preferenceGroup_${key}`) || key, names: [] });
+			// Same for groups: the port's own tab has no string to look up.
+			out.push({ key, title: loc(`preferenceGroup_${key}`) || g.title || key, names: [] });
 		}
 
 		for (const name of visiblePreferences()) {
@@ -61,15 +62,24 @@
 	// wrong showed raw ids like "expandStyle" in the preferences window.
 	function labelFor(name) {
 		const p = globalThis.preferences[name];
+		// Main.js sets .title from the strings file for every preference,
+		// including ones it doesn't know about — leaving the raw key behind
+		// for the port's own settings. Fall back to the schema's own title
+		// in that case.
 		if (p && p.title && p.title !== `preferencesTitle_${name}`) return p.title;
-		const s = loc(`preferencesTitle_${name}`);
-		return s || name;
+		const localised = loc(`preferencesTitle_${name}`);
+		if (localised) return localised;
+		const schema = (globalThis.KON_PREFS_SCHEMA || {})[name];
+		return (schema && schema.title) || name;
 	}
 
 	function descriptionFor(name) {
 		const p = globalThis.preferences[name];
 		if (p && p.description) return p.description;
-		return loc(`preferencesDesc_${name}`) || '';
+		const localised = loc(`preferencesDesc_${name}`);
+		if (localised) return localised;
+		const schema = (globalThis.KON_PREFS_SCHEMA || {})[name];
+		return (schema && schema.description) || '';
 	}
 
 	globalThis.konShowPreferences = function konShowPreferences() {

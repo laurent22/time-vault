@@ -55,11 +55,6 @@
 			toggle.onSelect = function () { setEnabled(!isEnabled()); };
 			items.push(toggle);
 
-			const joplin = new MenuItem();
-			joplin.title = loc('mainWindow_ctxMenu_syncJoplin') || 'Sync to Joplin';
-			joplin.onSelect = function () { if (host.joplinSync) host.joplinSync(); };
-			items.push(joplin);
-
 			// The original had an About box; Konfabulator's own menu opened
 			// it, so the widget never offered one itself.
 			const about = new MenuItem();

@@ -71,6 +71,30 @@ while ((g = GROUP.exec(src)) !== null) {
 	if (a.name) groups[a.name] = { icon: a.icon || '' };
 }
 
+// Settings the port adds, which the 2008 .kon naturally doesn't declare.
+// Kept here so the preferences window builds them like any other.
+Object.assign(prefs, {
+	joplinSyncEnabled: {
+		type: 'checkbox', defaultValue: '0', group: 'joplin',
+		title: 'Sync to Joplin',
+		description: 'One-way: the Time Vault notebook is rewritten on each sync, '
+			+ 'so any changes made in Joplin are lost. Joplin must be running with '
+			+ 'the Web Clipper service enabled.',
+	},
+	joplinSyncOnStop: {
+		type: 'checkbox', defaultValue: '0', group: 'joplin',
+		title: 'Sync after each entry',
+		description: 'Sync automatically whenever the timer is stopped.',
+	},
+	joplinSyncOnQuit: {
+		type: 'checkbox', defaultValue: '0', group: 'joplin',
+		title: 'Sync when quitting',
+		description: 'Sync automatically when TimeVault closes.',
+	},
+});
+
+groups.joplin = { icon: '', title: 'Joplin' };
+
 const names = Object.keys(prefs);
 const body = names
 	.map((n) => `\t${JSON.stringify(n)}: ${JSON.stringify(prefs[n])},`)

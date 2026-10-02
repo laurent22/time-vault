@@ -69,6 +69,12 @@ app.whenReady().then(() => {
 	trayHost.create(() => mainWindow);
 	menu.install(() => mainWindow);
 
+	// The renderer owns the preferences, so it tells us when the Joplin
+	// feature is switched on or off and the menu is rebuilt to match.
+	ipcMain.on('host:joplin-enabled', (_event, enabled) => {
+		menu.install(() => mainWindow, { joplinEnabled: !!enabled });
+	});
+
 	app.on('activate', () => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow();
 	});

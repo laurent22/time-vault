@@ -14,6 +14,9 @@ const path = require('node:path');
 const { JoplinClient } = require('./joplin-client');
 const joplinSync = require('./joplin-sync');
 
+// Held so the app can wait for a sync started during shutdown.
+let pendingQuitSync = null;
+
 const TOKEN_FILE = () => path.join(app.getPath('userData'), 'joplin-token.json');
 
 function loadToken() {
@@ -145,19 +148,33 @@ async function runSync(parentWindow, { interactive = true } = {}) {
 }
 
 function register() {
-	ipcMain.handle('joplin:sync', async (event) => {
+	ipcMain.handle('joplin:sync', async (event, options = {}) => {
 		const win = BrowserWindow.fromWebContents(event.sender);
+		const interactive = options.interactive !== false;
 		try {
-			return { ok: true, result: await runSync(win) };
+			return { ok: true, result: await runSync(win, { interactive }) };
 		} catch (e) {
-			dialog.showMessageBoxSync(win || undefined, {
-				type: 'error',
-				message: 'The Joplin sync failed.',
-				detail: e.message,
-				buttons: ['OK'],
-			});
+			// A background sync fails silently: it was never asked for at
+			// this moment, so a dialog would just be an interruption.
+			if (interactive) {
+				dialog.showMessageBoxSync(win || undefined, {
+					type: 'error',
+					message: 'The Joplin sync failed.',
+					detail: e.message,
+					buttons: ['OK'],
+				});
+			} else {
+				console.warn('[joplin] background sync failed:', e.message);
+			}
 			return { ok: false, error: e.message };
 		}
+	});
+
+	// Fired as the window unloads. Nothing can be awaited at that point, so
+	// this runs on after the renderer has gone and the app waits for it.
+	ipcMain.on('joplin:sync-on-quit', () => {
+		pendingQuitSync = runSync(null, { interactive: false })
+			.catch((e) => console.warn('[joplin] sync on quit failed:', e.message));
 	});
 
 	ipcMain.handle('joplin:forget', () => {
@@ -177,4 +194,6 @@ function register() {
 	});
 }
 
-module.exports = { register, runSync, connect, loadToken, saveToken, forgetToken, databasePath };
+const quitSyncPromise = () => pendingQuitSync;
+
+module.exports = { register, runSync, connect, quitSyncPromise, loadToken, saveToken, forgetToken, databasePath };

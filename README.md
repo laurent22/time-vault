@@ -50,6 +50,16 @@ npm run test:app  # tests that boot the whole widget
 
 Your data lives in `~/Library/Application Support/TimeVault` on macOS — `Events.db3` is a plain SQLite file, and CSV reports are written beside it. Databases from the original widget open unchanged.
 
+## Syncing to Joplin
+
+Optional, and off by default. Turn it on in **Preferences → Joplin**, with Joplin running and its Web Clipper service enabled (Joplin → Settings → Web Clipper). The first sync asks Joplin to authorise TimeVault; accept the prompt there and the token is remembered.
+
+It writes a **Time Vault** notebook containing a Summary note and one note per project, each listing its entries as a table. The sync is **one way**: those notes are rewritten from the database every time, so anything edited in Joplin is lost. Each note says so at the top.
+
+Sync on demand from **Reports → Sync to Joplin Now** or the widget's right-click menu, and optionally after each timed entry or when the app quits.
+
+The Joplin port is found the same way the Web Clipper finds it — probing ten ports from 41184 for a release build and 27583 for a development one — so it works against either without configuration.
+
 ## How the port works
 
 The original is about 10,700 lines of JavaScript written against Konfabulator, the Yahoo! Widgets runtime: roughly 8,200 lines of widget plus the 2,500-line WidGUI toolkit it loads at startup.
@@ -76,6 +86,7 @@ Deliberate changes, all because Konfabulator provided something Electron doesn't
 - **The tray icon** is Electron's, replacing a Windows-only AutoHotkey executable. It now also shows whether the timer is running — the original's was a liveness watchdog that never changed.
 - **Always on top** is a new preference, off by default, on the widget's right-click menu. Konfabulator floated widgets and offered the choice in its own menu, so the widget never had one.
 - **Preferences** render in their own window rather than the engine's, built from the same declarations in the original `.kon` manifest.
+- **Joplin sync** is new, and optional — see above.
 - **Zoom** is new. The widget is 1x artwork at fixed pixel coordinates, which is small on a modern display; scaling the stage magnifies everything while the layout code carries on in the original coordinates. The artwork is bitmap, so it interpolates — the PSDs are in the repo if sharper assets are ever wanted.
 
 ## Licence

@@ -50,7 +50,9 @@ contextBridge.exposeInMainWorld('tvHost', {
 	showAbout: () => ipcRenderer.send('host:show-about'),
 
 	// --- Joplin ---
-	joplinSync: () => ipcRenderer.invoke('joplin:sync'),
+	joplinSync: (options) => ipcRenderer.invoke('joplin:sync', options),
+	joplinSyncOnQuit: () => ipcRenderer.send('joplin:sync-on-quit'),
+	joplinSetEnabled: (enabled) => ipcRenderer.send('host:joplin-enabled', enabled),
 	joplinForget: () => ipcRenderer.invoke('joplin:forget'),
 	joplinStatus: () => ipcRenderer.invoke('joplin:status'),
 	setAlwaysOnTop: (on) => ipcRenderer.send('window:set-always-on-top', on),
