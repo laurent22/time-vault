@@ -65,6 +65,20 @@ the image decodes, and the original can't wait — `ThreePiecesRectangle` reads
 collapse to zero offsets. `tools/gen-image-sizes.js` reads PNG IHDR headers
 into a lookup table at build time.
 
+**Images must be decoded before any widget code runs.** Dimensions aren't
+enough: `MainWindow.js` composites the info area, start button and round
+buttons onto canvases *in its constructors*, using images it has just created.
+An `<img>` that hasn't decoded draws nothing and raises no error, so every
+canvas-composited part of the skin came out blank and the widget looked flat
+and grey. `shim/preload-images.js` decodes the whole skin up front and
+`shim/loader.js` loads the ported scripts only after that — which is why the
+`<script>` tags aren't in `index.html`.
+
+A trap inside that trap: the shim replaces the global `Image`, so the
+preloader must use `NativeImage` (captured in `primitives.js` before the
+shadowing). Using `new Image()` there builds a Konfabulator object with no
+`onload`, and startup hangs with no output at all.
+
 **Images must scale each axis independently.** The 3-piece backgrounds set
 only the width of a 1px-wide slice and expect the height to stay put. An
 `<img>` with one CSS dimension preserves its aspect ratio, making those slices
