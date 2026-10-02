@@ -1,0 +1,14 @@
+{
+  "name": "timevault",
+  "productName": "TimeVault",
+  "version": "0.1.0",
+  "description": "Time tracker — Electron port of the 2008 Yahoo! Widget",
+  "license": "GPL-2.0-or-later",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "39.0.0"
+  }
+}

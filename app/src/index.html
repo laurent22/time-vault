@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>TimeVault</title>
+	<style>
+		/* The window itself must be fully transparent so per-pixel alpha in the
+		   skin PNGs composites against the desktop. Any background colour here
+		   would show up as a rectangle. */
+		html, body {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			background: transparent;
+			overflow: hidden;
+			/* Widget chrome isn't text content — don't let it be selected or
+			   drag-and-dropped like a web page. */
+			user-select: none;
+			-webkit-user-select: none;
+		}
+
+		/* The ported layout code positions everything absolutely, in the
+		   original's pixel coordinates. This is the origin it positions
+		   against. */
+		#stage {
+			position: absolute;
+			inset: 0;
+		}
+
+		/* Skin art is 1x and must not be smoothed when scaled or snapped. */
+		#stage img {
+			image-rendering: -webkit-optimize-contrast;
+		}
+	</style>
+</head>
+<body>
+	<div id="stage"></div>
+	<script src="smoketest.js"></script>
+</body>
+</html>
