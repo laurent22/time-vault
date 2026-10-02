@@ -10,6 +10,8 @@
 const { app, Tray, Menu, nativeImage, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
 
+const windowHost = require('./window-host');
+
 let tray = null;
 let getWindow = () => null;
 
@@ -64,7 +66,10 @@ function buildMenu() {
 			click: (item) => {
 				const w = getWindow();
 				if (w && !w.isDestroyed()) {
-					w.setAlwaysOnTop(item.checked);
+					// Shared with the renderer's path so both apply the same
+					// window level; a plain setAlwaysOnTop here would float
+					// the widget only within its own app.
+					windowHost.setAlwaysOnTop(w, item.checked);
 					// Tell the renderer the new value so it persists it —
 					// the preferences file belongs to that side. Sending the
 					// value rather than a "changed" ping avoids the two

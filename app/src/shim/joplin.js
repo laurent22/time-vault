@@ -33,66 +33,41 @@
 	function publish() {
 		const on = enabled();
 		if (host.joplinSetEnabled) host.joplinSetEnabled(on);
-		if (on) authoriseIfNeeded();
+		// Switching it on syncs straight away, which is also what obtains
+		// authorisation the first time.
+		if (on) syncQuietly('the setting being switched on');
 	}
 
-	// Asks for authorisation when the feature is on but has no usable token.
-	//
-	// The condition is "enabled and not authorised", not "just switched on":
-	// keying off the transition meant a profile that already had the setting
-	// enabled — because it was switched on before authorisation ever
-	// succeeded — took the "already on" branch on every launch and could
-	// never prompt again. Every other trigger is deliberately silent, so that
-	// left no way to authorise at all.
-	//
-	// Guarded by a promise rather than a boolean so two triggers arriving
-	// together produce one prompt.
-	let authorising = null;
+	// Syncs, and says nothing. Authorisation is the main process's business:
+	// every sync there asks for it when there's no usable token, so there is
+	// no separate "authorise" step to coordinate from here. An earlier
+	// version gated this on a status check and passed interactive:false,
+	// which meant the automatic triggers could never authorise — and since
+	// every trigger is automatic, the feature could never start working.
+	// Counts syncs that actually fired, so the tests can assert on the
+	// triggers without reaching into tvHost — contextBridge freezes it, so a
+	// spy can't be installed there. Counted here rather than in scheduleSync
+	// so the undebounced callers (startup, enabling the setting) register too.
+	globalThis.KON_JOPLIN_SYNC_COUNT = 0;
 
-	function authoriseIfNeeded() {
-		if (!enabled() || !host.joplinStatus || !host.joplinSync) return Promise.resolve(false);
-		if (authorising) return authorising;
-
-		authorising = host.joplinStatus().then((s) => {
-			// Joplin not running isn't something to nag about: the silent
-			// syncs skip, and the next launch tries again.
-			if (!s || !s.running || s.authorised) return false;
-			return host.joplinSync({ interactive: true }).then(() => true);
-		}).catch((e) => {
-			console.warn('[joplin] authorisation failed:', e.message);
-			return false;
-		}).finally(() => { authorising = null; });
-
-		return authorising;
-	}
-
-	globalThis.konJoplinAuthoriseIfNeeded = authoriseIfNeeded;
-
-	// Syncs quietly: no dialogs, no prompt. If authorisation is missing the
-	// sync is skipped rather than demanding attention mid-task.
 	function syncQuietly(reason) {
 		if (!enabled() || !host.joplinSync) return;
-		host.joplinSync({ interactive: false }).then((r) => {
+		globalThis.KON_JOPLIN_SYNC_COUNT++;
+		host.joplinSync().then((r) => {
 			if (r && r.ok && r.result) {
 				console.log(`[joplin] synced after ${reason}:`,
 					`${r.result.projects} projects, ${r.result.events} entries`);
 			}
-		}).catch((e) => console.warn('[joplin] background sync failed:', e.message));
+		}).catch((e) => console.warn('[joplin] sync failed:', e.message));
 	}
 
 	let pending = null;
-
-	// Counts syncs that actually fired, so the tests can assert on the
-	// triggers without reaching into tvHost — contextBridge freezes it, so a
-	// spy can't be installed there.
-	globalThis.KON_JOPLIN_SYNC_COUNT = 0;
 
 	function scheduleSync(reason) {
 		if (!enabled()) return;
 		if (pending) clearTimeout(pending);
 		pending = setTimeout(() => {
 			pending = null;
-			globalThis.KON_JOPLIN_SYNC_COUNT++;
 			syncQuietly(reason);
 		}, DEBOUNCE_MS());
 	}
@@ -143,12 +118,9 @@
 		// was closed — including edits made to the database by hand. Delayed
 		// past boot so it doesn't compete with loading the widget, and so the
 		// schema setup that runs on a fresh database doesn't trigger it twice.
-		//
-		// Authorise first if there's no token: otherwise this sync, like every
-		// other, skips silently and the feature never starts working.
-		setTimeout(() => {
-			authoriseIfNeeded().then(() => syncQuietly('startup'));
-		}, 5000);
+		// This is also what asks for authorisation on a profile that hasn't
+		// been granted it yet.
+		setTimeout(() => syncQuietly('startup'), 5000);
 	});
 
 	// Sync on quit. beforeunload is synchronous, so this can only start the

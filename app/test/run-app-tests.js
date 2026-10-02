@@ -206,20 +206,28 @@ app.whenReady().then(async () => {
 			if (since() !== 0) return 'synced ' + since() + ' times while disabled';
 		});
 
-		await check('authorisation is offered whenever it is missing, not just on the edge', async () => {
-			// Keying this off the off->on transition meant a profile with the
-			// setting already enabled but never authorised could never prompt
-			// again — which is exactly the state a failed first attempt leaves
-			// behind, and is how this shipped broken. The condition has to be
-			// "enabled and not authorised".
-			if (typeof konJoplinAuthoriseIfNeeded !== 'function') return 'konJoplinAuthoriseIfNeeded missing';
+		await check('every sync requests authorisation, with no interactive flag', async () => {
+			// The sync used to pass interactive:false from the automatic
+			// triggers, and the main process refused to authorise in that
+			// mode. Since every trigger is automatic, nothing could ever
+			// authorise and the feature was impossible to start. There is no
+			// flag any more: the renderer asks for a sync and the main
+			// process authorises when it has to.
+			const src = String(globalThis.konJoplinScheduleSync)
+				+ String(globalThis.konJoplinSyncQuietly);
+			if (/interactive/.test(src)) {
+				return 'the renderer still passes an interactive flag';
+			}
+		});
 
-			const decide = (on, status) => (!on ? false : !!(status && status.running && !status.authorised));
-
-			if (!decide(true, { running: true, authorised: false })) return 'enabled with no token should prompt';
-			if (decide(true, { running: true, authorised: true })) return 'an authorised profile should not prompt';
-			if (decide(true, { running: false, authorised: false })) return 'Joplin being closed should not prompt';
-			if (decide(false, { running: true, authorised: false })) return 'a disabled feature should not prompt';
+		await check('switching the setting on syncs immediately', async () => {
+			// That first sync is what obtains authorisation, so without it a
+			// freshly enabled profile would sit idle until something changed.
+			preferences.joplinSyncEnabled.value = '1';
+			reset();
+			konJoplinSetEnabled(true);
+			await settle();
+			if (since() < 1) return 'enabling the setting did not sync';
 		});
 
 		delete globalThis.KON_JOPLIN_DEBOUNCE_MS;

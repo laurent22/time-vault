@@ -11,6 +11,31 @@
 
 const { ipcMain, BrowserWindow, screen } = require('electron');
 
+// Floats the window above other applications, or stops.
+//
+// The level matters on macOS: plain setAlwaysOnTop(true) uses the 'floating'
+// level, which keeps the window above its own app's windows but *below* the
+// active window of another application — so the widget kept disappearing
+// behind whatever was in front, which looks exactly like the feature not
+// working. 'screen-saver' is the level that actually stays on top, and is
+// what Konfabulator's floating widgets behaved like.
+//
+// skipTaskbar is relaxed with it: a window excluded from the window list and
+// pinned above everything can't be brought back by any normal means if it
+// ever does end up behind something.
+function setAlwaysOnTop(win, on) {
+	if (!win || win.isDestroyed()) return;
+
+	if (on) {
+		win.setAlwaysOnTop(true, 'screen-saver');
+		// Stay put when switching Spaces, the way a desktop widget should.
+		win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false });
+	} else {
+		win.setAlwaysOnTop(false);
+		win.setVisibleOnAllWorkspaces(false);
+	}
+}
+
 function register() {
 	// Dragging: deliberately manual rather than -webkit-app-region:drag,
 	// which swallows every event on the dragged element and would stop the
@@ -49,7 +74,7 @@ function register() {
 
 	ipcMain.on('window:set-always-on-top', (event, on) => {
 		const win = BrowserWindow.fromWebContents(event.sender);
-		if (win) win.setAlwaysOnTop(!!on);
+		if (win) setAlwaysOnTop(win, on);
 	});
 
 	// forward:true keeps mousemove flowing to the renderer while ignoring,
@@ -64,4 +89,4 @@ function register() {
 	ipcMain.handle('screen:get-work-area', () => screen.getPrimaryDisplay().workArea);
 }
 
-module.exports = { register };
+module.exports = { register, setAlwaysOnTop };

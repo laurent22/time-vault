@@ -15,6 +15,7 @@ const path = require('node:path');
 
 const { JoplinClient } = require('./joplin-client');
 const joplinSync = require('./joplin-sync');
+const windowHost = require('./window-host');
 
 // Held so the app can wait for a sync started during shutdown.
 let pendingQuitSync = null;
@@ -53,6 +54,18 @@ function forgetToken() {
 // after starting. Two triggers arriving together is enough to cause it.
 let authInFlight = null;
 
+// When the last attempt was abandoned, and how long to leave it before
+// asking again. Without this a rejected request would be re-raised on the
+// very next change, which with a per-change sync means constantly.
+let lastAuthAttempt = 0;
+const AUTH_RETRY_MS = 5 * 60 * 1000;
+
+// Lets "Forget Joplin Authorisation" ask again straight away rather than
+// waiting out the cooldown.
+function resetAuthBackoff() {
+	lastAuthAttempt = 0;
+}
+
 // Connects, authorising if there's no usable token yet. Returns a ready
 // client, or null if that isn't possible right now.
 //
@@ -61,7 +74,7 @@ let authInFlight = null;
 // only interface is Joplin's own prompt, which appears inside the Joplin
 // window reading "The Web Clipper needs your authorisation to access your
 // data.". Nothing is shown from here, so there is no dialog to cover it.
-async function connect(parentWindow, { interactive = true } = {}) {
+async function connect(parentWindow) {
 	const stored = loadToken();
 	const client = new JoplinClient(stored.port, stored.token);
 
@@ -73,26 +86,39 @@ async function connect(parentWindow, { interactive = true } = {}) {
 		return client;
 	}
 
-	// Only an explicitly requested sync asks for authorisation. A background
-	// one skips, and the next trigger tries again.
-	if (!interactive) return null;
-
+	// Any sync that finds no usable token asks for one — including the
+	// automatic ones. There used to be an `interactive` gate here, which made
+	// the feature impossible to start: the only triggers are automatic, so
+	// they all skipped, and nothing ever requested authorisation. Asking is
+	// safe because it costs no interface of ours; Joplin shows its own prompt
+	// and everything else stays silent.
 	if (authInFlight) return authInFlight;
+
+	// Don't re-raise a prompt that was just declined or ignored.
+	if (Date.now() - lastAuthAttempt < AUTH_RETRY_MS) return null;
+	lastAuthAttempt = Date.now();
 
 	authInFlight = (async () => {
 		// Dispatches the request into Joplin, which shows its prompt.
 		const authToken = await client.requestAuth();
+		console.log('[joplin] asked Joplin on port ' + client.port + ' for authorisation — '
+			+ 'accept the request in the Joplin window');
 
 		// Drop always-on-top for the duration: the widget would otherwise
 		// float above Joplin's window and hide the prompt inside it.
 		const wasAlwaysOnTop = parentWindow && !parentWindow.isDestroyed()
 			&& parentWindow.isAlwaysOnTop();
-		if (wasAlwaysOnTop) parentWindow.setAlwaysOnTop(false);
+		if (wasAlwaysOnTop) windowHost.setAlwaysOnTop(parentWindow, false);
 
 		try {
 			const token = await client.waitForAuth(authToken, { timeoutMs: 180000 });
-			if (!token) return null; // rejected, or never answered
+			if (!token) {
+				console.warn('[joplin] authorisation was not granted; will try again later');
+				return null; // rejected, superseded, or never answered
+			}
 			saveToken(token, client.port);
+			lastAuthAttempt = 0;
+			console.log('[joplin] authorised');
 			return client;
 		} catch (e) {
 			// A timeout is not a failure worth reporting: the prompt is still
@@ -100,8 +126,11 @@ async function connect(parentWindow, { interactive = true } = {}) {
 			console.warn('[joplin] authorisation did not complete:', e.message);
 			return null;
 		} finally {
+			// Restored through window-host so the original window level comes
+			// back; setAlwaysOnTop(true) alone would quietly downgrade it to
+			// floating-within-the-app.
 			if (wasAlwaysOnTop && parentWindow && !parentWindow.isDestroyed()) {
-				parentWindow.setAlwaysOnTop(true);
+				windowHost.setAlwaysOnTop(parentWindow, true);
 			}
 			authInFlight = null;
 		}
@@ -123,13 +152,15 @@ function databasePath() {
 	return path.join(app.getPath('userData'), 'Events.db3');
 }
 
-// Syncs if it can, and says nothing either way. `interactive` only decides
-// whether authorisation may be requested, not whether anything is displayed:
-// a set-and-forget sync that announces each success is worse than one that
-// stays quiet, and the failures here — Joplin closed, not yet authorised —
-// are all states that fix themselves on the next attempt.
-async function runSync(parentWindow, { interactive = true } = {}) {
-	const client = await connect(parentWindow, { interactive });
+// Syncs if it can, and says nothing either way.
+//
+// Every sync behaves identically, including authorising when there's no
+// usable token: there used to be an `interactive` distinction, but since the
+// only triggers are automatic it meant none of them could ever authorise, and
+// the feature was impossible to start. Joplin closed, or authorisation not
+// yet granted, are ordinary states that fix themselves on a later attempt.
+async function runSync(parentWindow) {
+	const client = await connect(parentWindow);
 	if (!client) return null;
 
 	const dbPath = databasePath();
@@ -139,11 +170,10 @@ async function runSync(parentWindow, { interactive = true } = {}) {
 }
 
 function register() {
-	ipcMain.handle('joplin:sync', async (event, options = {}) => {
+	ipcMain.handle('joplin:sync', async (event) => {
 		const win = BrowserWindow.fromWebContents(event.sender);
-		const interactive = options.interactive !== false;
 		try {
-			return { ok: true, result: await runSync(win, { interactive }) };
+			return { ok: true, result: await runSync(win) };
 		} catch (e) {
 			// Logged, never shown. A sync nobody asked to watch shouldn't
 			// interrupt to report that Joplin was closed.
@@ -155,12 +185,16 @@ function register() {
 	// Fired as the window unloads. Nothing can be awaited at that point, so
 	// this runs on after the renderer has gone and the app waits for it.
 	ipcMain.on('joplin:sync-on-quit', () => {
-		pendingQuitSync = runSync(null, { interactive: false })
+		pendingQuitSync = runSync(null)
 			.catch((e) => console.warn('[joplin] sync on quit failed:', e.message));
 	});
 
 	ipcMain.handle('joplin:forget', () => {
 		forgetToken();
+		// Clear the cooldown too, so the next sync asks again immediately
+		// rather than after it expires — forgetting the token is a request to
+		// start over.
+		resetAuthBackoff();
 		return true;
 	});
 

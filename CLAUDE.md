@@ -201,6 +201,16 @@ false failure.
 `test/layout-probe.js` dumps rendered geometry so layout can be checked
 without a screenshot.
 
+**Always on top needs a window level, not just the flag.** On macOS plain
+`setAlwaysOnTop(true)` uses the `'floating'` level, which keeps the window
+above its own app's windows but *below* another application's active window —
+so the widget kept vanishing behind whatever was in front, which reads as the
+feature being broken. `window-host.js` uses `'screen-saver'`. Note that
+`isAlwaysOnTop()` returns true either way, so it can't be the assertion; the
+test reads back the Spaces pinning instead. All three callers (renderer, tray,
+the Joplin auth flow restoring it) go through the one helper, or whichever
+forgets the level silently downgrades it.
+
 **Joplin keeps only the newest auth token.** `POST /auth` replaces it, so a
 second request invalidates the first: `/auth/check` then answers
 `{"error":"...Invalid auth token..."}` rather than a status, and a wait on the

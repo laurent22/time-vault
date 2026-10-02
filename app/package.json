@@ -8,8 +8,9 @@
   "scripts": {
     "//": "env -u ELECTRON_RUN_AS_NODE: VS Code's terminal exports it, which makes Electron run as plain Node and leaves every Electron API undefined.",
     "start": "env -u ELECTRON_RUN_AS_NODE electron .",
-    "test": "npm run test:unit && npm run test:shim && npm run test:app",
+    "test": "npm run test:unit && npm run test:window && npm run test:shim && npm run test:app",
     "test:unit": "node test/joplin-client-test.js",
+    "test:window": "env -u ELECTRON_RUN_AS_NODE electron test/window-host-test.js",
     "test:shim": "env -u ELECTRON_RUN_AS_NODE electron test/run-tests.js",
     "test:app": "env -u ELECTRON_RUN_AS_NODE electron test/run-app-tests.js",
     "boot-check": "env -u ELECTRON_RUN_AS_NODE electron test/boot-check.js",
