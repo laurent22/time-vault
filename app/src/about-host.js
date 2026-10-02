@@ -6,8 +6,8 @@
 //
 // Sizes, colours and shadows are taken verbatim from Contents/Time Vault.kon.
 // The title and version rows are nudged from their original coordinates to
-// sit better now the lower strip is empty: the title moved right 4px and down
-// 8px, and the version tucked up directly beneath it.
+// sit better now the lower strip is empty: the title moved right 2px and down
+// 6px, the version right 4px and down 8px, tucked beneath it.
 //
 // The Pogopixels branding is gone — the logo painted out of the artwork by
 // tools/gen-about-image.js, and the links with it — since the port isn't a
@@ -66,7 +66,7 @@ function buildHtml(version) {
 <body>
 	<div id="bg"></div>
 
-	<div class="t" style="left:119px; top:54px; font-size:20px; font-weight:bold; ${shadow}">Time Vault</div>
+	<div class="t" style="left:117px; top:52px; font-size:20px; font-weight:bold; ${shadow}">Time Vault</div>
 
 	<div class="t" style="left:119px; top:72px; font-size:14px; font-weight:bold; color:#222222; ${shadow}">Version</div>
 	<div class="t" style="left:174px; top:72px; font-size:14px; font-weight:bold; color:#222222;">${version}</div>
