@@ -132,6 +132,40 @@ class KonObject {
 		child._parent = null;
 	}
 
+	// Konfabulator's view-oriented aliases, used by WidGUI.
+	addSubview(child) { this.appendChild(child); }
+
+	removeSubview(child) { this.removeChild(child); }
+
+	removeFromSuperview() {
+		if (this._parent) this._parent.removeChild(this);
+	}
+
+	// Z-ordering. Konfabulator ordered siblings by their position in the
+	// parent's subview list, which is also how the DOM paints them, so this
+	// reorders both lists together rather than touching z-index.
+	orderAbove(sibling) { this._reorderRelativeTo(sibling, 'above'); }
+
+	orderBelow(sibling) { this._reorderRelativeTo(sibling, 'below'); }
+
+	_reorderRelativeTo(sibling, where) {
+		const parent = this._parent;
+		if (!parent || !sibling || sibling._parent !== parent) return;
+
+		const list = parent.subviews;
+		const from = list.indexOf(this);
+		if (from !== -1) list.splice(from, 1);
+		const target = list.indexOf(sibling);
+		list.splice(where === 'above' ? target + 1 : target, 0, this);
+
+		// Mirror the new order in the DOM: "above" means painted later.
+		if (where === 'above') {
+			sibling.node.after(this.node);
+		} else {
+			sibling.node.before(this.node);
+		}
+	}
+
 	// --- events -------------------------------------------------------------
 	//
 	// Konfabulator exposes handlers as assignable properties (obj.onMouseDown =
@@ -330,11 +364,53 @@ class Canvas extends KonObject {
 		this.node.style.height = `${h}px`;
 	}
 
-	getContext(type) { return this.node.getContext(type || '2d'); }
+	getContext(type) {
+		const ctx = this.node.getContext(type || '2d');
+		return wrapContext(ctx);
+	}
 
 	clear() {
 		this.getContext('2d').clearRect(0, 0, this.node.width, this.node.height);
 	}
+}
+
+// --- canvas context -------------------------------------------------------
+// Konfabulator's drawImage took its own Image objects. The DOM needs the
+// underlying <img>/<canvas> element, so the wrapper unwraps shim objects on
+// the way through. Everything else is forwarded untouched.
+//
+// The context is wrapped once per canvas and cached, so repeated getContext()
+// calls — Imaging.js calls it per redraw — don't allocate a new wrapper each
+// time.
+
+const contextCache = new WeakMap();
+
+function unwrap(v) {
+	return v && v.node ? v.node : v;
+}
+
+function wrapContext(ctx) {
+	if (!ctx) return ctx;
+	const cached = contextCache.get(ctx);
+	if (cached) return cached;
+
+	const wrapper = new Proxy(ctx, {
+		get(target, prop) {
+			const value = target[prop];
+			if (typeof value !== 'function') return value;
+			if (prop === 'drawImage' || prop === 'createPattern') {
+				return (first, ...rest) => value.call(target, unwrap(first), ...rest);
+			}
+			return value.bind(target);
+		},
+		set(target, prop, value) {
+			target[prop] = value;
+			return true;
+		},
+	});
+
+	contextCache.set(ctx, wrapper);
+	return wrapper;
 }
 
 // --- resource paths -------------------------------------------------------

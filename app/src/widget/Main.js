@@ -1098,7 +1098,9 @@ function checkVersionURL_done(iURL) {
 function checkVersion() {
 	if (preferences.checkForNewVersion.value != "1") return;
 	
-	__checkVersionURL = new URL();
+	// KonURL, not the DOM's URL: this is Konfabulator's async fetch object.
+	// (Ported change — the two names collide in a browser engine.)
+	__checkVersionURL = new KonURL();
 	__checkVersionURL.location = "http://api.pogopixels.com/?class=VersionChecker&action=check&itemID=TimeVault";
 	__checkVersionURL.fetchAsync(checkVersionURL_done);
 }

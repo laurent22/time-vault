@@ -40,3 +40,15 @@ globalThis.KON_PREFS_SCHEMA = {
 	"publishDailyReports": {"type":"checkbox","defaultValue":"1","group":"report"},
 	"reportDataDelimiter": {"type":"text","defaultValue":",","group":"report"},
 };
+
+globalThis.KON_PREF_GROUPS = {
+	"skin": {
+		"icon": "Resources/SkinIcon.png"
+	},
+	"time": {
+		"icon": "Resources/TimeIcon.png"
+	},
+	"report": {
+		"icon": "Resources/ReportIcon.png"
+	}
+};

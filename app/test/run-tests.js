@@ -9,6 +9,15 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+// Run against a scratch userData directory so the suite neither reads nor
+// clobbers the preferences and database of a real TimeVault install. Must be
+// set before anything reads app.getPath('userData'), which is why it comes
+// before the host modules are required.
+const TEST_USER_DATA = path.join(app.getPath('temp'), 'timevault-tests');
+fs.rmSync(TEST_USER_DATA, { recursive: true, force: true });
+fs.mkdirSync(TEST_USER_DATA, { recursive: true });
+app.setPath('userData', TEST_USER_DATA);
+
 const host = require('../src/host');
 const sqlHost = require('../src/sql-host');
 

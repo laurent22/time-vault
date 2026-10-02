@@ -18,6 +18,8 @@
 			   drag-and-dropped like a web page. */
 			user-select: none;
 			-webkit-user-select: none;
+			/* Konfabulator's default text rendering. */
+			font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 		}
 
 		/* The ported layout code positions everything absolutely, in the
@@ -36,6 +38,59 @@
 </head>
 <body>
 	<div id="stage"></div>
-	<script src="smoketest.js"></script>
+
+	<!-- ===== shim: must load before any ported code ===== -->
+	<script src="shim/bootstrap.js"></script>
+	<script src="shim/system.js"></script>
+	<script src="shim/filesystem.js"></script>
+	<script src="shim/xmldom.js"></script>
+	<script src="shim/sqlite.js"></script>
+	<script src="shim/prefs-schema.js"></script>
+	<script src="shim/preferences.js"></script>
+	<script src="shim/image-sizes.js"></script>
+	<script src="shim/primitives.js"></script>
+	<script src="shim/widgets.js"></script>
+
+	<!-- ===== ported widget code =====
+	     This order mirrors the includeFile() calls at the top of Main.js,
+	     which is where the original declared its dependencies. -->
+	<script src="widget/Localization.js"></script>
+	<script src="widget/StringHelper.js"></script>
+	<script src="widget/Log.js"></script>
+	<script src="widget/ExtendedTimer.js"></script>
+	<script src="widget/EventInterface.js"></script>
+	<script src="widget/DateHelper.js"></script>
+	<script src="widget/Database.js"></script>
+	<script src="widget/Imaging.js"></script>
+	<script src="widget/SystemHelper.js"></script>
+
+	<script src="widget/Puppeteer.js"></script>
+	<script src="widget/Puppeteer.Animation.js"></script>
+	<script src="widget/Puppeteer.EaseEquations.js"></script>
+
+	<!-- WidGUI, the UI toolkit Main.js loads at runtime -->
+	<script src="widgui/Widgui_Manager.js"></script>
+	<script src="widgui/Widgui_UserControl.js"></script>
+	<script src="widgui/Widgui_Label.js"></script>
+	<script src="widgui/Widgui_Button.js"></script>
+	<script src="widgui/Widgui_GraphicButton.js"></script>
+	<script src="widgui/Widgui_TextButton.js"></script>
+	<script src="widgui/Widgui_DropdownList.js"></script>
+
+	<script src="widget/EventDatabase.js"></script>
+	<script src="widget/ProjectEvent.js"></script>
+	<script src="widget/Project.js"></script>
+	<script src="widget/ProjectPossibleTask.js"></script>
+	<!-- FrameWrapper defines the base RoundButton and FlashingButton extend,
+	     so it has to come first. -->
+	<script src="widget/FrameWrapper.js"></script>
+	<script src="widget/ProjectItem.js"></script>
+	<script src="widget/PossibleTaskItem.js"></script>
+	<script src="widget/RoundButton.js"></script>
+	<script src="widget/FlashingButton.js"></script>
+	<script src="widget/MainWindow.js"></script>
+	<script src="widget/MainDrawer.js"></script>
+
+	<script src="widget/Main.js"></script>
 </body>
 </html>

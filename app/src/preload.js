@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('tvHost', {
 	widgetDataFolder: () => ipcRenderer.sendSync('host:data-folder'),
 	workArea: () => ipcRenderer.sendSync('host:work-area'),
 	appVersion: () => ipcRenderer.sendSync('host:app-version'),
+	assetRoot: () => ipcRenderer.sendSync('host:asset-root'),
 	platform: () => process.platform,
 	openExternal: (url) => ipcRenderer.send('host:open-external', url),
 });

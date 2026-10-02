@@ -83,6 +83,10 @@
 
 	globalThis.preferences = new Proxy(preferences, handler);
 
+	// <preferenceGroup> elements from the .kon; Main.js iterates these to
+	// title the tabs of the preferences dialog.
+	globalThis.preferenceGroups = globalThis.KON_PREF_GROUPS || {};
+
 	// Flush immediately on unload, so a quit doesn't lose the last 250ms of
 	// changes (window position in particular is written as the window moves).
 	globalThis.addEventListener('beforeunload', () => {

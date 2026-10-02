@@ -128,6 +128,12 @@ function register() {
 		event.returnValue = app.getVersion();
 	});
 
+	// Where the widget's own resources live, for resolving the
+	// bundle-relative paths the ported code uses.
+	ipcMain.on('host:asset-root', (event) => {
+		event.returnValue = path.join(__dirname, '..', 'assets');
+	});
+
 	ipcMain.on('host:open-external', (_event, url) => {
 		// Only http(s) and mailto: the widget's one call site is a version
 		// check URL, and anything else would be a way to launch arbitrary

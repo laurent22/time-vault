@@ -12,10 +12,41 @@
 (function () {
 	const host = globalThis.tvHost || {};
 
+	// The widget refers to its own files with bundle-relative paths
+	// ("Resources/WidGUI/Default/Skin.xml"), which Konfabulator resolved
+	// against the widget bundle. The port ships those under app/assets, so
+	// such paths are redirected there. Absolute paths — the database, report
+	// output, anything the user chose — are passed through untouched.
+	function resolvePath(p) {
+		const s = String(p == null ? '' : p);
+		if (!s || s.startsWith('/') || /^[A-Za-z]:/.test(s)) return s;
+		return `${assetRoot()}/${s.replace(/^Resources\//, '')}`;
+	}
+
+	let cachedAssetRoot = null;
+	function assetRoot() {
+		if (cachedAssetRoot === null) {
+			cachedAssetRoot = host.assetRoot ? host.assetRoot() : '';
+		}
+		return cachedAssetRoot;
+	}
+
+	// Methods whose first argument is a path into the widget's own files.
+	const PATH_METHODS = new Set([
+		'itemExists', 'isDirectory', 'createDirectory', 'getDirectoryContents',
+		'readFile', 'writeFile', 'remove', 'reveal',
+	]);
+
 	function fsCall(method, ...args) {
 		if (!host.fs) {
 			console.warn(`[filesystem] ${method} called with no host bridge`);
 			return undefined;
+		}
+		if (PATH_METHODS.has(method) && args.length) {
+			args[0] = resolvePath(args[0]);
+		} else if (method === 'copy') {
+			args[0] = resolvePath(args[0]);
+			args[1] = resolvePath(args[1]);
 		}
 		return host.fs(method, ...args);
 	}
@@ -105,9 +136,19 @@
 
 	// --- misc globals -------------------------------------------------------
 
-	// Load order is handled by script tags in index.html, so this is a no-op.
-	// Kept because Main.js calls it 25 times.
+	// Konfabulator's script loader. Load order is handled by the script tags
+	// in index.html, so this is a no-op — but it must exist, because both
+	// Main.js's own includeFile() wrapper and Widgui's usingControl() call
+	// through to it.
+	globalThis.include = function include() {};
+
+	// Main.js defines its own includeFile() wrapper, but RoundButton.js and
+	// FlashingButton.js call includeFile() at load time — and in the port they
+	// load before Main.js. Konfabulator had no such ordering problem because
+	// includeFile() pulled files in on demand. Providing it up front is
+	// harmless: Main.js's definition simply replaces this one.
 	globalThis.includeFile = function includeFile() {};
+
 
 	globalThis.openURL = function openURL(url) {
 		if (host.openExternal) host.openExternal(url);
