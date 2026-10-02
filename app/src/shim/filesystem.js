@@ -111,8 +111,14 @@
 		if (e.clientX !== undefined) {
 			ev.x = e.clientX;
 			ev.y = e.clientY;
-			ev.screenX = e.screenX;
-			ev.screenY = e.screenY;
+			// MainWindow's resize handler measures drag distance in screen
+			// coordinates. Synthesised events leave those at zero, which
+			// would make every delta zero, so fall back to client
+			// coordinates — the difference between two samples is the same
+			// either way as long as the window itself hasn't moved.
+			const hasScreen = e.screenX !== 0 || e.screenY !== 0;
+			ev.screenX = hasScreen ? e.screenX : e.clientX;
+			ev.screenY = hasScreen ? e.screenY : e.clientY;
 		}
 	}
 

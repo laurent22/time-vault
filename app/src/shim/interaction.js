@@ -32,8 +32,22 @@
 	function isInteractive(target) {
 		const k = target && target.__konObject;
 		if (!k) return false;
+
+		// The Window is the backdrop, not a control. It carries handlers of
+		// its own (the context menu, and MainWindow's enter/exit tracking),
+		// but a press landing on it means the cursor is over skin with no
+		// control under it — which is precisely a drag. Since handler-less
+		// elements became transparent to the mouse, most of the skin now
+		// hit-tests through to the window, so treating it as interactive
+		// stopped the widget being draggable anywhere.
+		if (typeof Window === 'function' && k instanceof Window) return false;
+
+		// onMouseDrag matters too: the resize button and the drawer's resize
+		// anchor work by dragging, and letting the window move instead would
+		// make them impossible to use.
 		return typeof k.onMouseDown === 'function'
 			|| typeof k.onMouseUp === 'function'
+			|| typeof k.onMouseDrag === 'function'
 			|| typeof k.onMultiClick === 'function';
 	}
 
@@ -42,18 +56,30 @@
 		if (isInteractive(e.target)) return;
 		dragging = true;
 		movedWhileDown = false;
-		lastScreenX = e.screenX;
-		lastScreenY = e.screenY;
+		const useScreen = e.screenX !== 0 || e.screenY !== 0;
+		lastScreenX = useScreen ? e.screenX : e.clientX;
+		lastScreenY = useScreen ? e.screenY : e.clientY;
 	}, true);
 
 	document.addEventListener('mousemove', (e) => {
 		if (!dragging) return;
-		const dx = e.screenX - lastScreenX;
-		const dy = e.screenY - lastScreenY;
+
+		// Screen coordinates would be the natural choice, but synthesised
+		// events leave them at zero, so the delta is taken from whichever
+		// pair is actually populated. Client coordinates work because the
+		// window moves with the cursor: the pointer stays put relative to
+		// the page, and the residual difference is the drag distance.
+		const useScreen = e.screenX !== 0 || e.screenY !== 0;
+		const x = useScreen ? e.screenX : e.clientX;
+		const y = useScreen ? e.screenY : e.clientY;
+
+		const dx = x - lastScreenX;
+		const dy = y - lastScreenY;
 		if (dx === 0 && dy === 0) return;
+
 		movedWhileDown = true;
-		lastScreenX = e.screenX;
-		lastScreenY = e.screenY;
+		lastScreenX = x;
+		lastScreenY = y;
 		if (host.moveBy) host.moveBy(dx, dy);
 	}, true);
 

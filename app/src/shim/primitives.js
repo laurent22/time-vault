@@ -340,6 +340,32 @@ class KonObject {
 		this.node.addEventListener('mouseenter', (e) => fire('onMouseEnter', e));
 		this.node.addEventListener('mouseleave', (e) => fire('onMouseExit', e));
 		this.node.addEventListener('wheel', (e) => fire('onMouseWheel', e));
+
+		// onMouseDrag has no DOM equivalent: Konfabulator sent it while the
+		// button was held, whether or not the cursor was still over the
+		// element. The resize button and the drawer's resize anchor are
+		// driven entirely by it, so it's synthesised here — listening on the
+		// document, since the pointer routinely leaves the small control
+		// being dragged.
+		this.node.addEventListener('mousedown', (e) => {
+			if (e.button !== 0) return;
+			if (typeof this.onMouseDrag !== 'function') return;
+
+			const onMove = (moveEvent) => {
+				// system.event is kept current by the capture-phase listener
+				// in shim/filesystem.js, which also handles the screen
+				// coordinate fallback; the handler reads it rather than
+				// taking the event as an argument.
+				this.onMouseDrag(moveEvent);
+			};
+			const onUp = () => {
+				document.removeEventListener('mousemove', onMove, true);
+				document.removeEventListener('mouseup', onUp, true);
+			};
+
+			document.addEventListener('mousemove', onMove, true);
+			document.addEventListener('mouseup', onUp, true);
+		});
 		this.node.addEventListener('contextmenu', (e) => fire('onContextMenu', e));
 
 		// Konfabulator's onClick: a press and release on the same element.

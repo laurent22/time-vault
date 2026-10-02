@@ -28,11 +28,14 @@
 	function groupedPreferences() {
 		const schema = globalThis.KON_PREFS_SCHEMA || {};
 		const groups = globalThis.preferenceGroups || {};
-		const out = [{ key: '', title: loc('preferenceGroup_general') || 'General', names: [] }];
+		// Ungrouped settings go first, where Konfabulator put them. The .kon
+		// declares no group for them, so there's no string to look up.
+		const out = [{ key: '', title: 'General', names: [] }];
 
 		for (const key of Object.keys(groups)) {
 			const g = groups[key];
-			out.push({ key, title: g.title || key, names: [] });
+			// Main.js sets .title from "preferenceGroup_<key>" at load.
+			out.push({ key, title: g.title || loc(`preferenceGroup_${key}`) || key, names: [] });
 		}
 
 		for (const name of visiblePreferences()) {
@@ -52,13 +55,21 @@
 		return s === id ? null : s;
 	}
 
+	// Main.js localises these at load — preferences[n].title from
+	// "preferencesTitle_<name>" and .description from "preferencesDesc_<name>"
+	// — so read what it set rather than guessing at key names. Getting that
+	// wrong showed raw ids like "expandStyle" in the preferences window.
 	function labelFor(name) {
-		return loc(`preference_${name}`) || name;
+		const p = globalThis.preferences[name];
+		if (p && p.title && p.title !== `preferencesTitle_${name}`) return p.title;
+		const s = loc(`preferencesTitle_${name}`);
+		return s || name;
 	}
 
 	function descriptionFor(name) {
 		const p = globalThis.preferences[name];
-		return (p && p.description) || loc(`preferenceDescription_${name}`) || '';
+		if (p && p.description) return p.description;
+		return loc(`preferencesDesc_${name}`) || '';
 	}
 
 	globalThis.konShowPreferences = function konShowPreferences() {
