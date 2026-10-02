@@ -22,6 +22,14 @@
 
 'use strict';
 
+// The mouse handlers Konfabulator dispatched. An element with none of them
+// assigned is transparent to the mouse, as it was in the original.
+const MOUSE_HANDLERS = [
+	'onMouseDown', 'onMouseUp', 'onMouseMove',
+	'onMouseEnter', 'onMouseExit', 'onMouseWheel',
+	'onMouseDrag', 'onMultiClick', 'onContextMenu', 'onClick',
+];
+
 // --- shared base ----------------------------------------------------------
 
 class KonObject {
@@ -84,8 +92,11 @@ class KonObject {
 
 	_applyTransform() {
 		const parts = [];
+		// Alignment shifts the box, so it has to come before the rotation,
+		// which then spins about the aligned position.
+		if (this._baseTransform) parts.push(this._baseTransform);
+		if (this._alignTransform) parts.push(this._alignTransform);
 		if (this._rotation) parts.push(`rotate(${this._rotation}deg)`);
-		if (this._baseTransform) parts.unshift(this._baseTransform);
 		this.node.style.transform = parts.join(' ');
 	}
 
@@ -103,12 +114,11 @@ class KonObject {
 		if (this._visible) {
 			this.node.style.visibility = 'visible';
 			this.node.style.clipPath = this._baseClip || '';
-			this.node.style.pointerEvents = this._tracking ? 'auto' : 'none';
 		} else {
 			this.node.style.visibility = 'hidden';
 			this.node.style.clipPath = 'inset(50%)';
-			this.node.style.pointerEvents = 'none';
 		}
+		this._refreshPointerEvents();
 	}
 
 	get zOrder() { return this._zOrder; }
@@ -120,8 +130,31 @@ class KonObject {
 	get tracking() { return this._tracking; }
 	set tracking(v) {
 		this._tracking = !!v;
-		// A hidden element never tracks, regardless of this flag.
-		this.node.style.pointerEvents = (this._tracking && this._visible) ? 'auto' : 'none';
+		this._refreshPointerEvents();
+	}
+
+	// Konfabulator's hAlign/vAlign say which point of the element hOffset and
+	// vOffset refer to: "center" means the offsets address its centre, not
+	// its top-left. MainWindow positions the screw and the start button's
+	// icon that way, so without this they sit half their size too far down
+	// and to the right.
+	get hAlign() { return this._hAlign || 'left'; }
+	set hAlign(v) {
+		this._hAlign = v;
+		this._applyAlign();
+	}
+
+	get vAlign() { return this._vAlign || 'top'; }
+	set vAlign(v) {
+		this._vAlign = v;
+		this._applyAlign();
+	}
+
+	_applyAlign() {
+		const x = this._hAlign === 'center' ? '-50%' : (this._hAlign === 'right' ? '-100%' : '0');
+		const y = this._vAlign === 'center' ? '-50%' : (this._vAlign === 'bottom' ? '-100%' : '0');
+		this._alignTransform = (x === '0' && y === '0') ? '' : `translate(${x}, ${y})`;
+		this._applyTransform();
 	}
 
 	get tooltip() { return this._tooltip; }
@@ -162,6 +195,8 @@ class KonObject {
 		child._parent = this;
 		this.subviews.push(child);
 		this.node.appendChild(child.node);
+		// An interactive frame's clickable area is its children's bounds.
+		this._refreshPointerEvents();
 	}
 
 	removeChild(child) {
@@ -212,7 +247,78 @@ class KonObject {
 	// fn) and calls them with the object as `this`. Wired once in the
 	// constructor so assigning a handler later still works.
 
+	// Konfabulator only sent mouse events to elements that had a handler for
+	// them; anything else was transparent and the press fell through to
+	// whatever was underneath. In the DOM every element hit-tests, so the
+	// decorative overlays drawn on top of the controls — BackgroundLeftHL
+	// over the start button, the icon images over the round buttons — were
+	// swallowing every click and nothing worked.
+	//
+	// Handlers are assigned after construction, so this can't be decided
+	// once; pointer-events is updated whenever one is added or removed.
+	_refreshPointerEvents() {
+		if (!this._visible || !this._tracking) {
+			this.node.style.pointerEvents = 'none';
+			return;
+		}
+
+		const interactive = this._hasMouseHandler();
+		this.node.style.pointerEvents = interactive ? 'auto' : 'none';
+
+		// A frame is a zero-size container: its children carry the pixels.
+		// If it's the one with the handler — which is how RoundButton and
+		// the drawer's controls are built — it has to cover its children or
+		// there's nothing to click. Konfabulator hit-tested a frame against
+		// its contents' bounds, so this reproduces that.
+		if (interactive && this._width == null && this._height == null) {
+			const { width, height } = this._measureChildren();
+			if (width > 0 && height > 0) {
+				this.node.style.width = `${width}px`;
+				this.node.style.height = `${height}px`;
+			}
+		}
+	}
+
+	// Bounds of this element's children, in its own coordinate space.
+	_measureChildren() {
+		let width = 0;
+		let height = 0;
+		for (const child of this.subviews) {
+			if (child._visible === false) continue;
+			const right = (Number(child.hOffset) || 0) + (Number(child.width) || 0);
+			const bottom = (Number(child.vOffset) || 0) + (Number(child.height) || 0);
+			if (right > width) width = right;
+			if (bottom > height) height = bottom;
+		}
+		return { width, height };
+	}
+
+	_hasMouseHandler() {
+		for (const name of MOUSE_HANDLERS) {
+			if (typeof this[name] === 'function') return true;
+		}
+		// A container with interactive children must stay hit-testable, but
+		// pointer-events:none on a parent doesn't stop children receiving
+		// events, so there's nothing extra to do here.
+		return false;
+	}
+
 	_installMouseEvents() {
+		// Watch for handlers being assigned so pointer-events can follow.
+		for (const name of MOUSE_HANDLERS) {
+			let stored;
+			Object.defineProperty(this, name, {
+				configurable: true,
+				enumerable: true,
+				get: () => stored,
+				set: (fn) => {
+					stored = fn;
+					this._refreshPointerEvents();
+				},
+			});
+		}
+		this._refreshPointerEvents();
+
 		const fire = (name, e) => {
 			const fn = this[name];
 			if (typeof fn === 'function') fn.call(this, e);
@@ -227,6 +333,10 @@ class KonObject {
 		this.node.addEventListener('mouseleave', (e) => fire('onMouseExit', e));
 		this.node.addEventListener('wheel', (e) => fire('onMouseWheel', e));
 		this.node.addEventListener('contextmenu', (e) => fire('onContextMenu', e));
+
+		// Konfabulator's onClick: a press and release on the same element.
+		// RoundButton drives the expand and resize buttons through it.
+		this.node.addEventListener('click', (e) => fire('onClick', e));
 
 		this.node.addEventListener('dblclick', (e) => {
 			const fn = this.onMultiClick;
@@ -246,16 +356,34 @@ class Frame extends KonObject {
 		this._height = null;
 	}
 
-	get width() { return this._width; }
+	// Konfabulator frames auto-sized to their contents: reading .height on a
+	// frame with no explicit size gave the extent of its children, not null.
+	// The layout depends on it — MainWindow centres the clock with
+	//   eventFrame.vOffset = (rightFrame.height - eventFrame.height) / 2 - 1
+	// which collapses to -1 if either side is null, pinning the text to the
+	// top edge where the window clips it.
+	get width() {
+		if (this._width != null) return this._width;
+		return this._measure().width;
+	}
 	set width(v) {
 		this._width = v == null ? null : Number(v);
 		this.node.style.width = this._width == null ? '' : `${this._width}px`;
 	}
 
-	get height() { return this._height; }
+	get height() {
+		if (this._height != null) return this._height;
+		return this._measure().height;
+	}
 	set height(v) {
 		this._height = v == null ? null : Number(v);
 		this.node.style.height = this._height == null ? '' : `${this._height}px`;
+	}
+
+	// Measured from the shim objects rather than the DOM so it works before
+	// the frame is in the document — the layout runs during construction.
+	_measure() {
+		return this._measureChildren();
 	}
 }
 

@@ -125,3 +125,74 @@ ixCheck('filesystem.remove refuses to delete bundled assets', () => {
 	if (removed !== false) return 'remove() should refuse and return false';
 	if (!filesystem.itemExists(asset)) return 'the asset was deleted anyway';
 });
+
+ixCheck('elements without a mouse handler are transparent to clicks', () => {
+	// Konfabulator only hit-tested elements that had a handler; everything
+	// else let the press fall through. In the DOM every element hit-tests,
+	// so decorative overlays — BackgroundLeftHL sitting over the start
+	// button, the icons over the round buttons — swallowed every click and
+	// none of the controls worked.
+	const plain = new Image();
+	plain.src = 'Resources/Skin/Default/Screw.png';
+	if (plain.node.style.pointerEvents !== 'none') {
+		return `a handler-less image should not hit-test, got ${plain.node.style.pointerEvents}`;
+	}
+
+	plain.onMouseDown = () => {};
+	if (plain.node.style.pointerEvents !== 'auto') {
+		return 'assigning a handler should make it hit-test';
+	}
+});
+
+ixCheck('an interactive frame covers its children so it can be clicked', () => {
+	// RoundButton puts its handlers on a frame and its pixels on child
+	// images. A zero-size frame has nothing to click.
+	const frame = new Frame();
+	frame.onMouseDown = () => {};
+
+	const icon = new Image();
+	icon.src = 'Resources/Skin/Default/RoundButtonBackground.png'; // 19x19
+	frame.appendChild(icon);
+
+	if (frame.node.style.pointerEvents !== 'auto') return 'the frame should hit-test';
+	const w = parseInt(frame.node.style.width, 10);
+	const h = parseInt(frame.node.style.height, 10);
+	if (!(w >= 19) || !(h >= 19)) return `the frame did not cover its child: ${w}x${h}`;
+});
+
+ixCheck('onClick fires, which the round buttons depend on', () => {
+	const f = new Frame();
+	document.body.appendChild(f.node);
+	let fired = 0;
+	f.onClick = () => { fired++; };
+	f.node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+	f.node.remove();
+	if (fired !== 1) return `onClick fired ${fired} times`;
+});
+
+ixCheck('a frame reports the extent of its children', () => {
+	// MainWindow centres the clock with
+	//   eventFrame.vOffset = (rightFrame.height - eventFrame.height) / 2 - 1
+	// which collapses to -1 — pinning the text to the clipped top edge — if
+	// an auto-sized frame reports null.
+	const frame = new Frame();
+	const a = new Image();
+	a.src = 'Resources/Skin/Default/BackgroundLeft.png'; // 53x89
+	a.hOffset = 10;
+	a.vOffset = 5;
+	frame.appendChild(a);
+
+	if (frame.width !== 63) return `width should be 10+53=63, got ${frame.width}`;
+	if (frame.height !== 94) return `height should be 5+89=94, got ${frame.height}`;
+});
+
+ixCheck('vAlign center shifts the element onto its offset', () => {
+	// MainWindow positions the screw and the start button icon this way.
+	const img = new Image();
+	img.src = 'Resources/Skin/Default/Screw.png';
+	img.vAlign = 'center';
+	// The browser normalises the zero to 0px.
+	if (!/translate\(0(px)?, -50%\)/.test(img.node.style.transform)) {
+		return `transform is ${JSON.stringify(img.node.style.transform)}`;
+	}
+});
