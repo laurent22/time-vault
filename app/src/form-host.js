@@ -53,7 +53,10 @@ function buildHtml(items, title, okLabel, cancelLabel) {
 	return `<!doctype html>
 <html><head><meta charset="utf-8"><style>
 	body { font: 13px -apple-system, "Helvetica Neue", sans-serif; margin: 0; padding: 16px;
-	       background: #ececec; color: #111; }
+	       background: #ececec; color: #111;
+	       /* Labels and descriptions are chrome, not content. */
+	       user-select: none; -webkit-user-select: none; cursor: default; }
+	input[type=text], select, textarea { user-select: text; -webkit-user-select: text; cursor: auto; }
 	h1 { font-size: 14px; margin: 0 0 14px; }
 	.row { margin-bottom: 12px; }
 	label { display: block; margin-bottom: 4px; }
@@ -112,7 +115,11 @@ function register() {
 			width: 420,
 			height,
 			parent: parent || undefined,
-			modal: !!parent,
+			// Not modal: on macOS a modal child is attached as a sheet, which
+			// has no titlebar of its own — and the parent widget is
+			// frameless, so there was nothing to drag the dialog by. Keeping
+			// `parent` still floats it above the widget.
+			modal: false,
 			resizable: false,
 			minimizable: false,
 			maximizable: false,

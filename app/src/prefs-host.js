@@ -62,7 +62,11 @@ function buildHtml(groups, title) {
 	return `<!doctype html>
 <html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
 	body { font: 13px -apple-system, "Helvetica Neue", sans-serif; margin: 0;
-	       background: #ececec; color: #111; display: flex; flex-direction: column; height: 100vh; }
+	       background: #ececec; color: #111; display: flex; flex-direction: column; height: 100vh;
+	       /* Labels, descriptions and tabs are chrome, not content — selecting
+	          them is never useful and looks broken when it highlights. */
+	       user-select: none; -webkit-user-select: none; cursor: default; }
+	input[type=text], select, textarea { user-select: text; -webkit-user-select: text; cursor: auto; }
 	.tabs { display: flex; gap: 2px; padding: 10px 12px 0; flex: none; }
 	.tab { font: inherit; padding: 5px 14px; border: 1px solid #bbb; border-bottom: none;
 	       border-radius: 5px 5px 0 0; background: #ddd; cursor: pointer; }
@@ -132,7 +136,11 @@ function register() {
 			width: 460,
 			height: 520,
 			parent: parent || undefined,
-			modal: !!parent,
+			// Not modal: on macOS a modal child is attached as a sheet, which
+			// has no titlebar of its own — and the parent widget is
+			// frameless, so there was nothing to drag the dialog by. Keeping
+			// `parent` still floats it above the widget.
+			modal: false,
 			resizable: false,
 			minimizable: false,
 			maximizable: false,
