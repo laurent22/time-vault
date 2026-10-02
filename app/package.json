@@ -6,7 +6,8 @@
   "license": "GPL-2.0-or-later",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "test": "electron test/run-tests.js"
   },
   "devDependencies": {
     "electron": "39.0.0"

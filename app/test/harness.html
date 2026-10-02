@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>shim tests</title></head>
+<body>
+	<!-- shim -->
+	<script src="../src/shim/system.js"></script>
+	<script src="../src/shim/image-sizes.js"></script>
+	<script src="../src/shim/primitives.js"></script>
+
+	<!-- real ported widget code, exercised by integration-test.js -->
+	<script src="../src/widget/Puppeteer.EaseEquations.js"></script>
+	<script src="../src/widget/Puppeteer.js"></script>
+	<script src="../src/widget/Imaging.js"></script>
+
+	<!-- tests -->
+	<script src="shim-test.js"></script>
+	<script src="integration-test.js"></script>
+</body>
+</html>
