@@ -89,6 +89,47 @@ ixCheck('a hidden element keeps its box so layout can measure it', () => {
 	if (r.width !== 100 || r.height !== 40) return `box collapsed to ${r.width}x${r.height}`;
 });
 
+ixCheck('a gated subtree reports no hover', () => {
+	// The DOM fires mouseenter when an element slides under a stationary
+	// cursor; Konfabulator only reported the cursor entering something. The
+	// drawer slides up from below when it opens, so every row passed
+	// beneath the pointer, lit its hover overlay, and never got a matching
+	// mouseleave — opening the drawer highlighted most of the list.
+	//
+	// Rather than infer this from pointer timing or geometry, the code
+	// doing the moving closes the gate for the duration; see
+	// gateDrawerWhileSliding in interaction.js.
+	if (typeof konSetMouseGate !== 'function') return 'konSetMouseGate is not exposed';
+
+	const container = new Frame();
+	container.width = 200;
+	container.height = 100;
+	document.body.appendChild(container.node);
+
+	const row = new Frame();
+	row.width = 100;
+	row.height = 30;
+	container.appendChild(row);
+
+	let entered = 0;
+	row.onMouseEnter = () => entered++;
+
+	// Gate closed on the container: the row inside must stay quiet.
+	konSetMouseGate(container, true);
+	row.node.dispatchEvent(new MouseEvent('mouseenter'));
+	const whileGated = entered;
+
+	// Reopened: hovering works again.
+	konSetMouseGate(container, false);
+	row.node.dispatchEvent(new MouseEvent('mouseenter'));
+	const afterGate = entered - whileGated;
+
+	container.node.remove();
+
+	if (whileGated !== 0) return 'a gated subtree still reported a hover';
+	if (afterGate !== 1) return `reopening the gate gave ${afterGate} hovers, expected 1`;
+});
+
 ixCheck('a hidden element stops tracking the mouse', () => {
 	const f = new Frame();
 	f.tracking = true;

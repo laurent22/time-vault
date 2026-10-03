@@ -30,6 +30,38 @@ const MOUSE_HANDLERS = [
 	'onMouseDrag', 'onMultiClick', 'onContextMenu', 'onClick',
 ];
 
+// Elements that are moving under their own power, and so must not report
+// hover while they do.
+//
+// The DOM fires mouseenter whenever the pointer and the element come to
+// overlap — including when the element arrives at a stationary pointer.
+// Konfabulator only reported the cursor entering something. The drawer
+// slides up from below when it opens, so every row passed beneath the
+// pointer, lit its hover overlay, and never got a matching mouseleave
+// because the pointer hadn't moved: opening the drawer highlighted most of
+// the list.
+//
+// Rather than guess from pointer timing or geometry, the code that moves
+// something says so. konSetMouseGate(frame, true) while it animates.
+const mouseGated = new Set();
+
+function mouseGateClosedFor(node) {
+	if (mouseGated.size === 0) return false;
+	for (let el = node; el; el = el.parentElement) {
+		if (mouseGated.has(el)) return true;
+	}
+	return false;
+}
+
+// Opens or closes the gate for an element and everything inside it.
+// Takes a shim object or a DOM node.
+globalThis.konSetMouseGate = function konSetMouseGate(target, closed) {
+	const node = target && target.node ? target.node : target;
+	if (!node) return;
+	if (closed) mouseGated.add(node);
+	else mouseGated.delete(node);
+};
+
 // --- shared base ----------------------------------------------------------
 
 class KonObject {
@@ -356,7 +388,15 @@ class KonObject {
 		this.node.addEventListener('mousemove', (e) => fire('onMouseMove', e));
 		// Konfabulator's enter/exit don't bubble from children, which is what
 		// mouseenter/mouseleave give us (unlike mouseover/mouseout).
-		this.node.addEventListener('mouseenter', (e) => fire('onMouseEnter', e));
+		// Enters are dropped while an ancestor is marked as moving — see
+		// konSetMouseGate. The DOM fires mouseenter when an element slides
+		// *under* a stationary cursor, which Konfabulator never did: it
+		// reported the cursor entering something, not something arriving
+		// under the cursor.
+		this.node.addEventListener('mouseenter', (e) => {
+			if (mouseGateClosedFor(this.node)) return;
+			fire('onMouseEnter', e);
+		});
 		this.node.addEventListener('mouseleave', (e) => fire('onMouseExit', e));
 		this.node.addEventListener('wheel', (e) => fire('onMouseWheel', e));
 

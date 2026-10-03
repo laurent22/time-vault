@@ -370,5 +370,45 @@
 			requestAnimationFrame(tick);
 		};
 		requestAnimationFrame(tick);
+
+		gateDrawerWhileSliding();
 	});
+
+	// The drawer slides up from below when it opens, passing every row under
+	// the pointer. The DOM reports each of those as a mouseenter, so the rows
+	// lit their hover overlays and kept them — the pointer never moved, so no
+	// mouseleave ever came.
+	//
+	// Konfabulator reported the cursor entering something, never something
+	// arriving under the cursor. Closing the gate for the duration of the
+	// slide says that directly, rather than trying to infer it from pointer
+	// timing or geometry. Wrapped here so MainWindow.js stays as it was.
+	function gateDrawerWhileSliding() {
+		const win = globalThis.gMainWindow;
+		if (!win || typeof win.toggleDrawer !== 'function') return;
+		if (typeof globalThis.konSetMouseGate !== 'function') return;
+
+		const container = win.drawerContainer;
+		if (!container) return;
+
+		const originalToggle = win.toggleDrawer;
+		win.toggleDrawer = function (...args) {
+			globalThis.konSetMouseGate(container, true);
+			return originalToggle.apply(this, args);
+		};
+
+		// The animation's completion hook is empty in the ported code, which
+		// is exactly where the gate should reopen — but not on the same
+		// tick. The rows are still settling when the slide ends, and an
+		// enter arriving in that gap lit one row. Two frames is enough for
+		// the layout to come to rest, and is imperceptible.
+		const originalDone = win.drawerOpenedAnimation_done;
+		win.drawerOpenedAnimation_done = function (...args) {
+			requestAnimationFrame(() => requestAnimationFrame(() => {
+				globalThis.konSetMouseGate(container, false);
+			}));
+			if (typeof originalDone === 'function') return originalDone.apply(this, args);
+			return undefined;
+		};
+	}
 })();
