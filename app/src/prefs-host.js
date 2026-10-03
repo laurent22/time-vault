@@ -9,6 +9,7 @@
 'use strict';
 
 const { ipcMain, BrowserWindow } = require('electron');
+const { attachEditMenu } = require('./edit-menu');
 
 function escapeHtml(s) {
 	return String(s)
@@ -154,6 +155,7 @@ function register() {
 		});
 
 		win.setMenu(null);
+		attachEditMenu(win);
 
 		let settled = false;
 		const reply = (value) => {

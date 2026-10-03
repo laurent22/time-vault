@@ -34,6 +34,21 @@ function install(getWindow, { joplinEnabled = false } = {}) {
 				{ role: 'quit' },
 			],
 		}] : []),
+		// Cut/copy/paste are delivered by these menu roles, not by the OS: on
+		// macOS without an Edit menu the shortcuts simply don't exist, so no
+		// text field anywhere in the app could be copied from or pasted into.
+		{
+			label: 'Edit',
+			submenu: [
+				{ role: 'undo' },
+				{ role: 'redo' },
+				{ type: 'separator' },
+				{ role: 'cut' },
+				{ role: 'copy' },
+				{ role: 'paste' },
+				{ role: 'selectAll' },
+			],
+		},
 		{
 			label: 'Timer',
 			submenu: [
