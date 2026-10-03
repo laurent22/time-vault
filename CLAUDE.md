@@ -39,27 +39,10 @@ upgrade it and let the postinstall download — an earlier version of this note
 said to pin to whatever was already in `~/Library/Caches/electron` to avoid
 downloading, which is no longer a constraint.
 
-### Run Electron and macOS media tools outside the agent's sandbox
-
-**Rule: if a command invokes `electron`, `electron-builder`, `sips`, `open`,
-or any packaged `.app`, pass `dangerouslyDisableSandbox: true` on the first
-attempt.** Don't wait for it to fail.
-
-The sandbox denies Mach port registration, which those all need. The failures
-are silent or misleading, so they read as bugs in the thing being run:
-
-- `electron` dies with `bootstrap_check_in ... Permission denied (1100)`,
-  a `FATAL` that looks like a corrupt install
-- `sips` prints its input and output filenames, exits 0, and writes nothing
-- a packaged `.app` exits 0 with no window and no output
-
-This is *not* a filesystem-permission problem — the project directory is
-writable and the Write tool works normally. Allowlisting paths in `/sandbox`
-does not help. Only disabling the sandbox for that command does.
-
-Diagnosing one of these as an application bug has already cost hours twice:
-once chasing a "startup crash" in `main.js` that was really the sandbox, and
-once treating a no-op `sips` as a missing tool.
+Essentially everything here runs through `electron`, so if you are an agent
+with a sandboxed shell, see the sandbox rule in the global `~/.claude/CLAUDE.md`
+— `electron`, `electron-builder`, `sips` and packaged apps all need it
+disabled, and the denials are silent enough to look like application bugs.
 
 ## The port's architecture
 
