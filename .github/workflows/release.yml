@@ -76,10 +76,29 @@ jobs:
       # electron-builder publishes to the release itself when it sees a tag,
       # creating a draft if there isn't one. On anything else it only packages,
       # which verifies the build without touching releases.
+      #
+      # Signing and notarization only happen on a tag. Pull requests from
+      # forks can't read secrets, so an unconditional attempt would fail the
+      # build for outside contributors — and signing an unreleased build
+      # costs time and, for the SSL.com HSM, a signing operation.
       - name: Build and publish
         working-directory: app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # macOS: the Developer ID certificate, then notarization.
+          CSC_LINK: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_TEAM_ID || '' }}
+
+          # Windows: SSL.com cloud eSigner.
+          SIGN_APPLICATION: ${{ (runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')) && '1' || '0' }}
+          SSL_ESIGNER_USER_NAME: ${{ secrets.SSL_ESIGNER_USER_NAME }}
+          SSL_ESIGNER_USER_PASSWORD: ${{ secrets.SSL_ESIGNER_USER_PASSWORD }}
+          SSL_ESIGNER_CREDENTIAL_ID: ${{ secrets.SSL_ESIGNER_CREDENTIAL_ID }}
+          SSL_ESIGNER_USER_TOTP: ${{ secrets.SSL_ESIGNER_USER_TOTP }}
         run: npx electron-builder --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
 
       - name: Upload artefacts

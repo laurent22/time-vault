@@ -18,9 +18,20 @@ files:
   - '!**/*.psd'
   - '!**/*.af'
 
+# Notarization runs from the afterSign hook rather than electron-builder's
+# own `notarize` option, so the app can also be stapled — see tools/notarize.js.
+afterSign: tools/notarize.js
+
 mac:
   category: public.app-category.productivity
   icon: build/icon.png
+  # Required for notarization. The entitlements grant the JIT and
+  # writable-executable memory Chromium needs, which it otherwise blocks.
+  hardenedRuntime: true
+  notarize: false
+  entitlements: build-mac/entitlements.mac.plist
+  entitlementsInherit: build-mac/entitlements.mac.plist
+  gatekeeperAssess: false
   target:
     - target: dmg
       arch: [x64, arm64]
@@ -29,6 +40,14 @@ mac:
 
 win:
   icon: build/icon.png
+  # SSL.com cloud eSigner — the certificate is in their HSM, not on disk.
+  signtoolOptions:
+    sign: tools/sign-windows.js
+    rfc3161TimeStampServer: http://timestamp.digicert.com
+    # Must match the certificate subject exactly. Joplin's SSL.com
+    # certificate is issued to "Joplin", and these are its credentials.
+    publisherName:
+      - Joplin
   target:
     - target: nsis
       arch: [x64]
