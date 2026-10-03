@@ -70,8 +70,14 @@ app.whenReady().then(() => {
 			windowHost.setAlwaysOnTop(w, true);
 			windowHost.setAlwaysOnTop(w, false);
 			assert.strictEqual(w.isAlwaysOnTop(), false);
-			assert.strictEqual(w.isVisibleOnAllWorkspaces(), false,
-				'the Spaces pinning must be undone too, or the window stays stuck');
+
+			// Spaces are a macOS concept. On X11 isVisibleOnAllWorkspaces()
+			// reports true whatever was set, so asserting it there fails for
+			// a reason that has nothing to do with the code under test.
+			if (process.platform === 'darwin') {
+				assert.strictEqual(w.isVisibleOnAllWorkspaces(), false,
+					'the Spaces pinning must be undone too, or the window stays stuck');
+			}
 		} finally {
 			w.destroy();
 		}
