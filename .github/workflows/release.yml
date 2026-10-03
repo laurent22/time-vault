@@ -41,7 +41,12 @@ jobs:
         # what the latest labels resolved to when this was written, so
         # upgrading is a deliberate edit.
         include:
-          - os: macos-26
+          # macos-15, not 26: signing fails on the 26 image with
+          # "SecKeychainUnlock: the user name or passphrase you entered is
+          # not correct" for a password that is demonstrably correct —
+          # security set-key-partition-list behaves differently there.
+          # These same credentials sign Joplin on macos-15.
+          - os: macos-15
             name: macOS
           - os: ubuntu-24.04
             name: Linux
