@@ -1,9 +1,16 @@
 name: Release
 
-# Pushing a version tag builds the app on all three platforms and attaches
-# the installers to a GitHub release.
+# Pushing a version tag builds the app on all three platforms, attaches the
+# installers to a GitHub release, writes a changelog from the commits since
+# the previous tag, and publishes it.
 #
+#   # set the version in app/package.json to match, then:
 #   git tag v1.5.6 && git push origin v1.5.6
+#
+# electron-builder creates the release as a draft and each platform uploads
+# into it; the release job below fills in the notes and makes it public once
+# all three have finished. If any platform fails the draft is left alone, so
+# a half-built release is never published.
 #
 # Pushes and pull requests build too, but publish nothing — so a broken
 # packaging step is caught before a tag depends on it.
@@ -14,6 +21,11 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+
+# Needed to create the release and upload to it. The default token is
+# read-only, so without this electron-builder's publish step fails.
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -131,3 +143,57 @@ jobs:
             app/dist/*.deb
           if-no-files-found: error
           retention-days: 14
+
+  # Writes the release notes and publishes the draft electron-builder created.
+  #
+  # A separate job because the three builds run in parallel and all upload to
+  # the same release: generating notes inside them would race, and whichever
+  # finished first would publish a release the others were still filling.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The full history, so the previous tag can be found.
+          fetch-depth: 0
+
+      - name: Write the changelog and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          previous="$(git describe --tags --abbrev=0 "${tag}^" 2>/dev/null || true)"
+
+          if [ -n "$previous" ]; then
+            echo "changes since ${previous}"
+            range="${previous}..${tag}"
+            limit=""
+          else
+            # First release: the whole history would be hundreds of lines, so
+            # summarise instead of listing every commit since the beginning.
+            echo "no previous tag; listing the most recent commits only"
+            range="${tag}"
+            limit="-30"
+          fi
+
+          {
+            echo "## What's changed"
+            echo
+            # Subject lines only, so the long explanatory bodies this repo
+            # favours don't drown the list. Merge commits add nothing.
+            git log --no-merges $limit --pretty=format:'- %s' "$range"
+            echo
+            echo
+            if [ -n "$previous" ]; then
+              echo "**Full changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${previous}...${tag}"
+            fi
+          } > notes.md
+
+          echo "--- notes.md ---"
+          cat notes.md
+
+          # electron-builder left a draft with every platform's installers
+          # attached; this fills in the notes and makes it public.
+          gh release edit "$tag" --notes-file notes.md --draft=false
