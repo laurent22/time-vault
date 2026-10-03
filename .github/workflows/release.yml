@@ -65,11 +65,16 @@ jobs:
         working-directory: app
         run: npm ci
 
-      # The suite boots a real Electron renderer, which needs a display.
-      # Without xvfb every test fails on Linux with no useful error.
+      # Two Linux-only needs. The suite boots a real Electron renderer, so it
+      # needs a display — xvfb. And Chromium's SUID sandbox requires
+      # chrome-sandbox to be setuid root, which it isn't after npm ci, so
+      # Electron aborts rather than run unsandboxed. Disabling it is safe
+      # here: a CI runner is already a throwaway container.
       - name: Test (Linux)
         if: runner.os == 'Linux'
         working-directory: app
+        env:
+          ELECTRON_DISABLE_SANDBOX: 1
         run: xvfb-run --auto-servernum npm test
 
       - name: Test
