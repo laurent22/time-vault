@@ -24,12 +24,16 @@ jobs:
       # add the rest without re-running everything.
       fail-fast: false
       matrix:
+        # Pinned rather than *-latest: those jump major versions without
+        # warning and break a build that was fine the day before. These are
+        # what the latest labels resolved to when this was written, so
+        # upgrading is a deliberate edit.
         include:
-          - os: macos-latest
+          - os: macos-26
             name: macOS
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             name: Linux
-          - os: windows-latest
+          - os: windows-2025
             name: Windows
 
     steps:
