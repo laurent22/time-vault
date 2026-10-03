@@ -78,6 +78,13 @@ app.whenReady().then(() => {
 	app.on('activate', () => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow();
 	});
+}).catch((e) => {
+	// Without this a failure during startup is an unhandled rejection: the
+	// process exits 0 with nothing printed and no window, which looks
+	// exactly like a clean quit and is near-impossible to diagnose in a
+	// packaged app, where stdout goes nowhere.
+	console.error('[main] startup failed:', e && e.stack ? e.stack : e);
+	app.exit(1);
 });
 
 app.on('window-all-closed', () => {

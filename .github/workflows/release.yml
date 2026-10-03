@@ -1,0 +1,96 @@
+name: Release
+
+# Pushing a version tag builds the app on all three platforms and attaches
+# the installers to a GitHub release.
+#
+#   git tag v1.5.6 && git push origin v1.5.6
+#
+# Pushes and pull requests build too, but publish nothing — so a broken
+# packaging step is caught before a tag depends on it.
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One platform failing shouldn't throw away the other two: on a tag
+      # that would leave a release with some assets missing and no way to
+      # add the rest without re-running everything.
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS
+          - os: ubuntu-22.04
+            name: Linux
+          - os: windows-latest
+            name: Windows
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      # electron-builder names every artefact from package.json, so a tag that
+      # disagrees with it would publish v1.5.6 containing TimeVault-0.1.0.dmg.
+      # Checked on one platform only; it's the same repository either way.
+      - name: Check the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'Linux'
+        working-directory: app
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $pkg."
+            echo "Set the version in app/package.json to $tag, commit, then move the tag."
+            exit 1
+          fi
+          echo "tag $GITHUB_REF_NAME matches package.json $pkg"
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      # The suite boots a real Electron renderer, which needs a display.
+      # Without xvfb every test fails on Linux with no useful error.
+      - name: Test (Linux)
+        if: runner.os == 'Linux'
+        working-directory: app
+        run: xvfb-run --auto-servernum npm test
+
+      - name: Test
+        if: runner.os != 'Linux'
+        working-directory: app
+        run: npm test
+
+      # electron-builder publishes to the release itself when it sees a tag,
+      # creating a draft if there isn't one. On anything else it only packages,
+      # which verifies the build without touching releases.
+      - name: Build and publish
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: timevault-${{ matrix.name }}
+          path: |
+            app/dist/*.dmg
+            app/dist/*.zip
+            app/dist/*.exe
+            app/dist/*.AppImage
+            app/dist/*.deb
+          if-no-files-found: error
+          retention-days: 14

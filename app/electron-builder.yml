@@ -1,0 +1,54 @@
+# Packaging configuration.
+#
+# Deliberately a separate file rather than a "build" block in package.json:
+# electron-builder rewrites package.json in place when the config lives there,
+# stripping scripts and devDependencies from the working copy.
+
+appId: net.cozic.timevault
+productName: TimeVault
+copyright: Copyright © Laurent Cozic, 2007-2026
+
+directories:
+  buildResources: build
+  output: dist
+
+files:
+  - src/**/*
+  - assets/**/*
+  - '!**/*.psd'
+  - '!**/*.af'
+
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.png
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+linux:
+  icon: build/icon.png
+  category: Utility
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+
+publish:
+  - provider: github
+    owner: laurent22
+    repo: time-vault

@@ -18,22 +18,6 @@ From the original description:
 
 Projects carry a time budget, notes and a rate per hour, and can be archived once finished. The current task is auto-saved every minute, so a crash or a power cut costs you at most that. Four colour schemes, and localisation in English, French and Turkish.
 
-## Running it
-
-Requires Node and a working `npm`.
-
-```bash
-cd app
-npm install
-npm start
-```
-
-```bash
-npm test          # the full suite
-npm run test:shim # the compatibility layer only
-npm run test:app  # tests that boot the whole widget
-```
-
 ## Using it
 
 | | |
@@ -52,21 +36,33 @@ Your data lives in `~/Library/Application Support/TimeVault` on macOS — `Event
 
 ## Syncing to Joplin
 
-Optional, and off by default. Turn it on in **Preferences → Joplin**, with Joplin running and its Web Clipper service enabled (Joplin → Settings → Web Clipper). Switching it on asks Joplin to authorise TimeVault; accept the prompt there and the token is remembered.
+TimeVault can keep a **Time Vault** notebook in Joplin up to date with your projects and entries.
 
-It writes a **Time Vault** notebook containing a Summary note and one note per project, each listing its entries as a table. The sync is **one way**: those notes are rewritten from the database every time, so anything edited in Joplin is lost. Each note says so at the top.
+Turn it on in **Preferences → Joplin**, with Joplin running and its Web Clipper service enabled (Joplin → Settings → Web Clipper). Joplin will ask you to authorise TimeVault — the request appears inside the Joplin window, so bring it to the front if you don't see it. After that everything is automatic: it syncs whenever your data changes, and never shows a dialog.
 
-After that it is entirely automatic, with no "sync now" command: it syncs at startup, whenever anything in the projects or entries changes, and on quit. Changes are watched at the single point every database write passes through, so nothing is missed, and a burst of them — saving an entry is several statements — collapses into one sync a few seconds later.
+The sync is **one way**. Those notes are rewritten from TimeVault every time, so anything you edit in Joplin is lost.
 
-Set and forget: TimeVault never shows a dialog about any of this. If Joplin is closed, or authorisation hasn't been granted yet, the sync is skipped and the next one tries again — those are ordinary states, not errors worth interrupting for. Problems are logged to the console rather than raised. **Reports → Forget Joplin Authorisation** clears the stored token, so switching the setting off and on again will ask for a new one.
+## Development
 
-The Joplin port is found the same way the Web Clipper finds it, probing ten ports from the base: 41184 for a release build, 27583 for a development one. The two are **matched** — a development TimeVault syncs only with a development Joplin and a release build only with a release Joplin. There's deliberately no fallback between them: crossing over would mean a development build writing into your real notes, and authorising against an app you weren't watching, so the prompt would look like it never appeared. If the matching Joplin isn't running, nothing syncs.
+### Running it
 
-The one piece of interface is Joplin's own: it asks for authorisation **inside its own window**, not as a separate alert, so bring Joplin to the front if you can't see the request. TimeVault drops its always-on-top setting while waiting, so the widget doesn't cover it.
+Requires Node and a working `npm`.
 
-## How the port works
+```bash
+cd app
+npm install
+npm start
+```
 
-The original is about 10,700 lines of JavaScript written against Konfabulator, the Yahoo! Widgets runtime: roughly 8,200 lines of widget plus the 2,500-line WidGUI toolkit it loads at startup.
+```bash
+npm test          # the full suite
+npm run test:shim # the compatibility layer only
+npm run test:app  # tests that boot the whole widget
+```
+
+### How the port works
+
+The original is about 10,700 lines of JavaScript written against [Konfabulator](https://en.wikipedia.org/wiki/Yahoo_Widgets), the Yahoo! Widgets runtime: roughly 8,200 lines of widget plus the 2,500-line WidGUI toolkit it loads at startup.
 
 Almost none of it was rewritten. Instead `app/src/shim/` reimplements the Konfabulator runtime over the DOM — its drawing primitives, preferences, filesystem, SQLite, dialogs and menus — so the original layout and animation code runs largely unchanged. Three edits were made to the ported source: one name collision, and two mechanical rewrites of syntax no standard JavaScript engine accepts.
 
@@ -82,7 +78,7 @@ app/          the port
 
 `CLAUDE.md` documents the compatibility traps worth knowing about before changing anything — several cost real time to find, and most fail silently rather than erroring.
 
-## What's different from the original
+### What's different from the original
 
 Deliberate changes, all because Konfabulator provided something Electron doesn't, or vice versa:
 
