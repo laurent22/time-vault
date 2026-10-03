@@ -18,7 +18,8 @@
     "interaction": "env -u ELECTRON_RUN_AS_NODE electron test/interaction-probe.js",
     "gen": "env -u ELECTRON_RUN_AS_NODE electron tools/gen-tray-icon.js && env -u ELECTRON_RUN_AS_NODE electron tools/gen-about-image.js && env -u ELECTRON_RUN_AS_NODE electron tools/gen-app-icon.js && node tools/gen-image-sizes.js && node tools/gen-prefs-schema.js",
     "dist": "electron-builder",
-    "dist:dir": "electron-builder --dir"
+    "dist:dir": "electron-builder --dir",
+    "release": "node tools/release.js"
   },
   "devDependencies": {
     "@electron/notarize": "3.1.1",
