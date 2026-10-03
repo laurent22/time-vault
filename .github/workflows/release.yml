@@ -86,29 +86,39 @@ jobs:
       # creating a draft if there isn't one. On anything else it only packages,
       # which verifies the build without touching releases.
       #
-      # Signing and notarization only happen on a tag. Pull requests from
-      # forks can't read secrets, so an unconditional attempt would fail the
-      # build for outside contributors — and signing an unreleased build
-      # costs time and, for the SSL.com HSM, a signing operation.
+      # Unsigned, for pushes and pull requests: it verifies the packaging
+      # without touching releases. Signing is deliberately absent rather than
+      # passed empty — electron-builder reads CSC_LINK='' as "a certificate
+      # was supplied", then fails with "<app dir> not a file".
+      - name: Build (no signing, no publishing)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        working-directory: app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npx electron-builder --publish=never
+
+      # The real thing, on a tag: signed, notarized, and published to the
+      # release that electron-builder creates.
       - name: Build and publish
+        if: startsWith(github.ref, 'refs/tags/v')
         working-directory: app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
           # macOS: the Developer ID certificate, then notarization.
-          CSC_LINK: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_CSC_LINK || '' }}
-          CSC_KEY_PASSWORD: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_CSC_KEY_PASSWORD || '' }}
-          APPLE_ID: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_ID || '' }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.APPLE_TEAM_ID || '' }}
+          CSC_LINK: ${{ secrets.APPLE_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
           # Windows: SSL.com cloud eSigner.
-          SIGN_APPLICATION: ${{ (runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')) && '1' || '0' }}
+          SIGN_APPLICATION: ${{ runner.os == 'Windows' && '1' || '0' }}
           SSL_ESIGNER_USER_NAME: ${{ secrets.SSL_ESIGNER_USER_NAME }}
           SSL_ESIGNER_USER_PASSWORD: ${{ secrets.SSL_ESIGNER_USER_PASSWORD }}
           SSL_ESIGNER_CREDENTIAL_ID: ${{ secrets.SSL_ESIGNER_CREDENTIAL_ID }}
           SSL_ESIGNER_USER_TOTP: ${{ secrets.SSL_ESIGNER_USER_TOTP }}
-        run: npx electron-builder --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+        run: npx electron-builder --publish=always
 
       - name: Upload artefacts
         uses: actions/upload-artifact@v4
