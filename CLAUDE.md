@@ -39,6 +39,28 @@ upgrade it and let the postinstall download — an earlier version of this note
 said to pin to whatever was already in `~/Library/Caches/electron` to avoid
 downloading, which is no longer a constraint.
 
+### Run Electron and macOS media tools outside the agent's sandbox
+
+**Rule: if a command invokes `electron`, `electron-builder`, `sips`, `open`,
+or any packaged `.app`, pass `dangerouslyDisableSandbox: true` on the first
+attempt.** Don't wait for it to fail.
+
+The sandbox denies Mach port registration, which those all need. The failures
+are silent or misleading, so they read as bugs in the thing being run:
+
+- `electron` dies with `bootstrap_check_in ... Permission denied (1100)`,
+  a `FATAL` that looks like a corrupt install
+- `sips` prints its input and output filenames, exits 0, and writes nothing
+- a packaged `.app` exits 0 with no window and no output
+
+This is *not* a filesystem-permission problem — the project directory is
+writable and the Write tool works normally. Allowlisting paths in `/sandbox`
+does not help. Only disabling the sandbox for that command does.
+
+Diagnosing one of these as an application bug has already cost hours twice:
+once chasing a "startup crash" in `main.js` that was really the sandbox, and
+once treating a no-op `sips` as a missing tool.
+
 ## The port's architecture
 
 The original is ~10,700 lines of Konfabulator-flavoured JS: 8,200 in
@@ -205,12 +227,12 @@ degraded app, and the symptom is a packaged binary that exits 0 immediately
 with no window and nothing on stdout — which looks like a startup crash and
 sends you hunting in the wrong place entirely.
 
-**Packaged apps can't be launched from the agent's shell here.** A packaged
-Electron app started from this environment exits 0 immediately, with `main.js`
-never executing — verified by injecting a file-write at the top of the
-packaged copy. It is not specific to this project: a three-line vanilla
-electron-builder app fails identically. Don't debug the app over it; test a
-packaged build by launching it from Finder.
+**Packaged apps can't be launched from the agent's shell.** A packaged
+Electron app started from there exits 0 immediately with `main.js` never
+executing — verified by injecting a file-write at the top of the packaged
+copy. Not specific to this project: a three-line vanilla electron-builder app
+fails identically. Don't debug the app over it; ask for it to be launched from
+Finder. See the sandbox rule under Running.
 
 **A packaged macOS app writes nothing to stdout.** `console.log` from the main
 process is invisible when launched via `open`, and near-invisible when the
