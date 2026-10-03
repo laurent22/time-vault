@@ -20,8 +20,13 @@ const path = require('node:path');
 
 const PACKAGE = path.join(__dirname, '..', 'package.json');
 
+// stdio 'pipe' on all three streams so a failure's stderr is capturable
+// rather than being dumped straight to the terminal by the child.
 function git(...args) {
-	return execFileSync('git', args, { encoding: 'utf8' }).trim();
+	return execFileSync('git', args, {
+		encoding: 'utf8',
+		stdio: ['ignore', 'pipe', 'pipe'],
+	}).trim();
 }
 
 function fail(message) {
@@ -89,8 +94,23 @@ git('commit', '-m', `TimeVault ${version}`);
 git('tag', tag);
 
 const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
-git('push', 'origin', branch);
-git('push', 'origin', tag);
+
+// The commit and tag already exist by now, so a failed push leaves local
+// work that has to be either pushed or undone. Say which, rather than
+// dumping a stack trace and leaving it to be worked out.
+try {
+	git('push', 'origin', branch);
+	git('push', 'origin', tag);
+} catch (e) {
+	const detail = (e.stderr || e.message || '').toString().trim();
+	console.error(`\nrelease: the push failed.\n\n${detail}\n`);
+	console.error(`${tag} and the version commit exist locally but were not pushed.`);
+	console.error('Fix the problem and run:');
+	console.error(`    git push origin ${branch} && git push origin ${tag}`);
+	console.error('or undo them with:');
+	console.error(`    git tag -d ${tag} && git reset --hard HEAD~1`);
+	process.exit(1);
+}
 
 const url = git('remote', 'get-url', 'origin')
 	.replace(/\.git$/, '')
