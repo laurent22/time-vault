@@ -126,7 +126,6 @@ jobs:
           name: timevault-${{ matrix.name }}
           path: |
             app/dist/*.dmg
-            app/dist/*.zip
             app/dist/*.exe
             app/dist/*.AppImage
             app/dist/*.deb
