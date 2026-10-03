@@ -12,7 +12,7 @@
 
 'use strict';
 
-const { ipcMain, BrowserWindow, dialog, Menu } = require('electron');
+const { ipcMain, BrowserWindow, dialog, Menu, nativeTheme } = require('electron');
 const { attachEditMenu } = require('./edit-menu');
 const { centreOnParent } = require('./dialog-position');
 
@@ -113,7 +113,14 @@ function register() {
 		const parent = BrowserWindow.fromWebContents(event.sender);
 		const height = Math.min(620, 140 + items.length * 72);
 
+		// Painted before the HTML loads, and not shown until it has:
+		// otherwise Electron shows a white window for a frame or two
+		// before the stylesheet applies, which flashes in dark mode.
+		const dark = nativeTheme.shouldUseDarkColors;
+
 		const win = new BrowserWindow({
+			show: false,
+			backgroundColor: dark ? '#2a2a2a' : '#ececec',
 			width: 420,
 			height,
 			parent: parent || undefined,
@@ -133,6 +140,10 @@ function register() {
 		win.setMenu(null);
 		attachEditMenu(win);
 		centreOnParent(win, parent);
+
+		// Shown only once the first frame is painted, so the window
+		// never appears empty.
+		win.once('ready-to-show', () => win.show());
 
 		let settled = false;
 		const reply = (value) => {
