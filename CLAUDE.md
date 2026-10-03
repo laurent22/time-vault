@@ -254,11 +254,19 @@ packaged build, 27583 for `npm start` (`app.isPackaged`). There is no fallback
 between them on purpose: a dev build reaching the release app writes into real
 notes and authorises against a window you aren't watching. `connect()` also
 discards a *stored* port outside the current range, or a token saved before
-this rule would pin a dev build to the release app forever. Note that
-`productName` in package.json *is* honoured for an unpackaged app launched as
-`electron .` — userData is `TimeVault`, not `Electron`. A standalone
-`electron some-script.js` gets `Electron`, which is why probe scripts appear to
-use a different profile than the app.
+this rule would pin a dev build to the release app forever.
+
+**Development and release runs use separate profiles.** `main.js` renames the
+app to `TimeVault (dev)` when `!app.isPackaged`, so `npm start` writes to a
+directory of its own and can't disturb an installed build's database,
+preferences or Joplin token. The override has to happen before any host module
+is required — `host.js` resolves `userData` at module load, so a later
+`setPath` is ignored.
+
+A standalone `electron some-script.js` gets neither profile: `productName`
+only applies when Electron loads the package, so probe scripts land in
+`Electron`. That is why a probe appears to use a different profile than the
+app, and why a probe is the wrong place to check what the app stores.
 
 **Joplin keeps only the newest auth token.** `POST /auth` replaces it, so a
 second request invalidates the first: `/auth/check` then answers

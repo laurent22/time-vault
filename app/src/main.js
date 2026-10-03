@@ -7,6 +7,21 @@
 
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('node:path');
+
+// Development runs get their own profile.
+//
+// Without this, `npm start` and an installed build share one data directory,
+// so there is no way to experiment without touching real timings and a real
+// Joplin token. A development build already talks to a development Joplin —
+// see joplin-client.js — and this applies the same split to the data.
+//
+// Must run before any host module is required: host.js resolves userData at
+// module load, so a later override would be ignored.
+if (!app.isPackaged) {
+	app.setName('TimeVault (dev)');
+	app.setPath('userData', path.join(app.getPath('appData'), 'TimeVault (dev)'));
+}
+
 const host = require('./host');
 const sqlHost = require('./sql-host');
 const formHost = require('./form-host');

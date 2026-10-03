@@ -32,7 +32,7 @@ Projects carry a time budget, notes and a rate per hour, and can be archived onc
 | **Resize it** | drag the round button on the right |
 | **Zoom** | `Cmd-+` / `Cmd--` / `Cmd-0`, or right-click the widget |
 
-Your data lives in `~/Library/Application Support/TimeVault` on macOS — `Events.db3` is a plain SQLite file, and CSV reports are written beside it. Databases from the original widget open unchanged.
+Your data lives in a `TimeVault` folder — `~/Library/Application Support` on macOS, `%APPDATA%` on Windows, `~/.config` on Linux. `Events.db3` is a plain SQLite file, and CSV reports are written beside it. Databases from the original widget open unchanged.
 
 ## Syncing to Joplin
 
