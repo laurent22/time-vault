@@ -34,8 +34,10 @@ API undefined — the symptom is `Cannot read properties of undefined (reading
 'on')`. Invoking `electron` directly rather than through npm needs
 `env -u ELECTRON_RUN_AS_NODE` in front of it.
 
-Electron is pinned to an exact version so the postinstall resolves from the
-local `~/Library/Caches/electron` rather than downloading from GitHub.
+Electron is pinned to an exact version for reproducible builds. It's fine to
+upgrade it and let the postinstall download — an earlier version of this note
+said to pin to whatever was already in `~/Library/Caches/electron` to avoid
+downloading, which is no longer a constraint.
 
 ## The port's architecture
 
@@ -202,6 +204,13 @@ and the `build` block itself. Every subsequent build then packages a more
 degraded app, and the symptom is a packaged binary that exits 0 immediately
 with no window and nothing on stdout — which looks like a startup crash and
 sends you hunting in the wrong place entirely.
+
+**Packaged apps can't be launched from the agent's shell here.** A packaged
+Electron app started from this environment exits 0 immediately, with `main.js`
+never executing — verified by injecting a file-write at the top of the
+packaged copy. It is not specific to this project: a three-line vanilla
+electron-builder app fails identically. Don't debug the app over it; test a
+packaged build by launching it from Finder.
 
 **A packaged macOS app writes nothing to stdout.** `console.log` from the main
 process is invisible when launched via `open`, and near-invisible when the

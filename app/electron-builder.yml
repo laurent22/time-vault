@@ -32,11 +32,12 @@ mac:
   entitlements: build-mac/entitlements.mac.plist
   entitlementsInherit: build-mac/entitlements.mac.plist
   gatekeeperAssess: false
+  # Both architectures, as separate dmgs rather than one universal binary:
+  # a universal build bundles two copies of Electron, so it's roughly twice
+  # the size for a download most people only need half of.
   target:
     - target: dmg
-      arch: [x64, arm64]
-    - target: zip
-      arch: [x64, arm64]
+      arch: [arm64, x64]
 
 win:
   icon: build/icon.png
