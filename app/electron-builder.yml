@@ -62,6 +62,10 @@ nsis:
 linux:
   icon: build/icon.png
   category: Utility
+  # A .deb refuses to build without a maintainer address. Nothing reads it,
+  # so this is a placeholder rather than a real mailbox — report problems on
+  # the GitHub issue tracker.
+  maintainer: Laurent Cozic <no-reply@example.com>
   target:
     - target: AppImage
       arch: [x64]
