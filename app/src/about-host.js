@@ -19,6 +19,7 @@
 const { app, ipcMain, BrowserWindow, shell } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
+const { centreOnParent } = require('./dialog-position');
 
 // Straight from the <about-box> element.
 const WIDTH = 396;
@@ -118,6 +119,7 @@ function show(parent) {
 	});
 
 	aboutWindow.setMenu(null);
+	centreOnParent(aboutWindow, parent);
 	aboutWindow.loadURL(
 		`data:text/html;charset=utf-8,${encodeURIComponent(buildHtml(widgetVersion() || app.getVersion()))}`);
 	aboutWindow.on('closed', () => { aboutWindow = null; });

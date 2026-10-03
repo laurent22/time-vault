@@ -14,6 +14,7 @@
 
 const { ipcMain, BrowserWindow, dialog, Menu } = require('electron');
 const { attachEditMenu } = require('./edit-menu');
+const { centreOnParent } = require('./dialog-position');
 
 function escapeHtml(s) {
 	return String(s)
@@ -131,6 +132,7 @@ function register() {
 
 		win.setMenu(null);
 		attachEditMenu(win);
+		centreOnParent(win, parent);
 
 		let settled = false;
 		const reply = (value) => {
