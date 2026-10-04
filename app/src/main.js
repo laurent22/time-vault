@@ -17,10 +17,16 @@ const path = require('node:path');
 //
 // Must run before any host module is required: host.js resolves userData at
 // module load, so a later override would be ignored.
-if (!app.isPackaged) {
-	app.setName('TimeVault (dev)');
-	app.setPath('userData', path.join(app.getPath('appData'), 'TimeVault (dev)'));
-}
+// The data folder is pinned to "TimeVault" regardless of the display name.
+// Electron derives userData from the product name, so renaming the app to
+// "Time Vault" would silently point it at an empty directory and orphan
+// every existing database, preference and Joplin token.
+app.setPath('userData', path.join(
+	app.getPath('appData'),
+	app.isPackaged ? 'TimeVault' : 'TimeVault (dev)',
+));
+
+if (!app.isPackaged) app.setName('Time Vault (dev)');
 
 const host = require('./host');
 const sqlHost = require('./sql-host');

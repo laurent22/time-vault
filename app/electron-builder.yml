@@ -5,7 +5,7 @@
 # stripping scripts and devDependencies from the working copy.
 
 appId: net.cozic.timevault
-productName: TimeVault
+productName: Time Vault
 copyright: Copyright © Laurent Cozic, 2007-2026
 
 directories:
