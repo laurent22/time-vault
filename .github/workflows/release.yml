@@ -169,7 +169,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF_NAME}"
-          previous="$(git describe --tags --abbrev=0 "${tag}^" 2>/dev/null || true)"
+
+          # Everything except the version-bump commits that `npm run release`
+          # makes. Those are the whole content of a tag-to-tag range —
+          # release tags immediately after committing the bump — so without
+          # this every changelog reads "- TimeVault 1.6.2" and nothing else.
+          real_commits() {
+            git log --no-merges --pretty=format:'%s' "$@" \
+              | grep -vE '^TimeVault [0-9]+\.[0-9]+\.[0-9]+$' || true
+          }
+
+          # Walk back through earlier tags until one has actual changes
+          # between it and this one. A release that only bumps the version
+          # would otherwise hide the work done before it.
+          previous=""
+          candidate="$(git describe --tags --abbrev=0 "${tag}^" 2>/dev/null || true)"
+          while [ -n "$candidate" ]; do
+            previous="$candidate"
+            if [ -n "$(real_commits "${candidate}..${tag}")" ]; then break; fi
+            candidate="$(git describe --tags --abbrev=0 "${candidate}^" 2>/dev/null || true)"
+          done
 
           if [ -n "$previous" ]; then
             echo "changes since ${previous}"
@@ -183,13 +202,15 @@ jobs:
             limit="-30"
           fi
 
+          changes="$(real_commits $limit "$range" | sed 's/^/- /')"
+          [ -n "$changes" ] || changes="- Maintenance release; no user-visible changes."
+
           {
             echo "## What's changed"
             echo
             # Subject lines only, so the long explanatory bodies this repo
-            # favours don't drown the list. Merge commits add nothing.
-            git log --no-merges $limit --pretty=format:'- %s' "$range"
-            echo
+            # favours don't drown the list.
+            echo "$changes"
             echo
             if [ -n "$previous" ]; then
               echo "**Full changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${previous}...${tag}"
