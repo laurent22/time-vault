@@ -8,6 +8,14 @@ appId: net.cozic.timevault
 productName: Time Vault
 copyright: Copyright © Laurent Cozic, 2007-2026
 
+# No auto-update, so none of its bookkeeping. electron-builder otherwise
+# emits a .blockmap beside every installer (for differential downloads) and
+# a latest-*.yml manifest (for version discovery), both of which only
+# electron-updater reads — and the app doesn't use it.
+generateUpdatesFilesForAllChannels: false
+dmg:
+  writeUpdateInfo: false
+
 directories:
   buildResources: build
   output: dist
@@ -58,6 +66,7 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  differentialPackage: false
 
 linux:
   icon: build/icon.png
