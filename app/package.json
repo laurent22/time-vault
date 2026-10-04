@@ -16,7 +16,7 @@
     "boot-check": "env -u ELECTRON_RUN_AS_NODE electron test/boot-check.js",
     "layout": "env -u ELECTRON_RUN_AS_NODE electron test/layout-probe.js",
     "interaction": "env -u ELECTRON_RUN_AS_NODE electron test/interaction-probe.js",
-    "gen": "env -u ELECTRON_RUN_AS_NODE electron tools/gen-tray-icon.js && env -u ELECTRON_RUN_AS_NODE electron tools/gen-about-image.js && env -u ELECTRON_RUN_AS_NODE electron tools/gen-app-icon.js && node tools/gen-image-sizes.js && node tools/gen-prefs-schema.js",
+    "gen": "env -u ELECTRON_RUN_AS_NODE electron tools/gen-tray-icon.js && env -u ELECTRON_RUN_AS_NODE electron tools/gen-about-image.js && node tools/gen-image-sizes.js && node tools/gen-prefs-schema.js",
     "demo-db": "node tools/make-demo-db.js",
     "dist": "electron-builder",
     "dist:dir": "electron-builder --dir",
