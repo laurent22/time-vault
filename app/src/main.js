@@ -8,19 +8,29 @@
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('node:path');
 
-// Development runs get their own profile.
+// Software rendering, deliberately.
 //
-// Without this, `npm start` and an installed build share one data directory,
-// so there is no way to experiment without touching real timings and a real
-// Joplin token. A development build already talks to a development Joplin —
-// see joplin-client.js — and this applies the same split to the data.
+// This is a small transparent frameless window. GPU compositing with
+// per-pixel alpha takes an expensive path on macOS, and at 215x136 there is
+// nothing to gain from it — no video, no WebGL, a handful of canvases.
 //
-// Must run before any host module is required: host.js resolves userData at
+// The dev build already runs entirely on software (measured: gpu_compositing,
+// rasterization and 2d_canvas all disabled_software) and is smooth, while the
+// packaged build was slow to start and visibly jerky. Matching dev removes
+// that difference. Must be called before the app is ready.
+app.disableHardwareAcceleration();
+
+// Development runs get their own profile, so `npm start` can't disturb an
+// installed build's database, preferences or Joplin token. A development
+// build already talks to a development Joplin — see joplin-client.js — and
+// this applies the same split to the data.
+//
+// The folder is pinned by name rather than left to Electron, which derives
+// userData from the product name: renaming the app to "Time Vault" would
+// otherwise have pointed it at an empty directory and orphaned everything.
+//
+// Must run before any host module is required — host.js resolves userData at
 // module load, so a later override would be ignored.
-// The data folder is pinned to "TimeVault" regardless of the display name.
-// Electron derives userData from the product name, so renaming the app to
-// "Time Vault" would silently point it at an empty directory and orphan
-// every existing database, preference and Joplin token.
 app.setPath('userData', path.join(
 	app.getPath('appData'),
 	app.isPackaged ? 'TimeVault' : 'TimeVault (dev)',
@@ -77,6 +87,15 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+	// Logged so a packaged build can report what it actually got: a
+	// difference here between dev and release is worth knowing about, and
+	// nothing else reveals it. Visible in Console.app for an installed app,
+	// which writes nothing to stdout.
+	const gpu = app.getGPUFeatureStatus();
+	console.log(`[gpu] compositing=${gpu.gpu_compositing}`
+		+ ` raster=${gpu.rasterization} 2d=${gpu['2d_canvas']}`
+		+ ` packaged=${app.isPackaged}`);
+
 	host.register();
 	sqlHost.register();
 	formHost.register();
