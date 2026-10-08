@@ -80,10 +80,21 @@ async function connect(parentWindow) {
 
 	if (!await client.connect()) return null;
 
-	if (await client.tokenIsValid()) {
+	const valid = await client.tokenIsValid();
+
+	if (valid === true) {
 		// The port can change between runs, so keep the stored copy current.
 		if (stored.port !== client.port) saveToken(client.token, client.port);
 		return client;
+	}
+
+	// Couldn't tell — Joplin was busy, restarting, or didn't answer in time.
+	// Skipping is right: the token is probably fine, and asking for a new one
+	// would pop Joplin's authorisation prompt for no reason. The next sync
+	// tries again.
+	if (valid === null) {
+		console.warn('[joplin] could not verify the stored token; skipping this sync');
+		return null;
 	}
 
 	// Any sync that finds no usable token asks for one — including the
@@ -205,7 +216,9 @@ function register() {
 		return {
 			running,
 			port: client.port,
-			authorised: running ? await client.tokenIsValid() : false,
+			// tokenIsValid returns null when it couldn't tell; report that as
+			// not-authorised rather than letting null leak to the renderer.
+			authorised: running ? (await client.tokenIsValid()) === true : false,
 		};
 	});
 }

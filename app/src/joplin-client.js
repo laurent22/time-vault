@@ -168,13 +168,31 @@ class JoplinClient {
 	}
 
 	// Confirms a stored token still works — Joplin's tokens can be revoked.
+	// Three outcomes, not two:
+	//   true   — the token works
+	//   false  — Joplin rejected it, so a new one is needed
+	//   null   — couldn't tell; Joplin was busy, restarting or unreachable
+	//
+	// The distinction matters because the caller asks for authorisation on
+	// anything that isn't `true`. This used to catch every error and report
+	// false, so a timed-out or refused request — Joplin mid-sync, or quitting
+	// — looked exactly like a revoked token and raised Joplin's authorisation
+	// prompt for a token that was perfectly good.
+	//
+	// Only 401/403 means rejected. Joplin answers 403 with
+	// `Invalid "token" parameter` for a bad one.
 	async tokenIsValid() {
 		if (!this.token) return false;
 		try {
-			const r = await this.get('/folders', { limit: 1 });
-			return Array.isArray(r.items);
+			const r = await fetchWithTimeout(this.url('/folders', { limit: 1 }));
+			if (r.status === 401 || r.status === 403) return false;
+			if (!r.ok) return null;
+			const body = await r.json();
+			return Array.isArray(body.items) ? true : null;
 		} catch {
-			return false;
+			// Timeout, connection refused, malformed response: unknown, not
+			// invalid.
+			return null;
 		}
 	}
 

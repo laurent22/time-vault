@@ -151,6 +151,54 @@ async function check(name, fn) {
 		assert.strictEqual(result, null);
 	});
 
+	// --- tokenIsValid: only a rejection means the token is bad -------------
+
+	// A stub that controls the status code, which withStub above doesn't.
+	async function withStatus(status, body, fn) {
+		const http = require('node:http');
+		const server = http.createServer((_req, res) => {
+			res.writeHead(status, { 'Content-Type': 'application/json' });
+			res.end(body);
+		});
+		await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+		const { JoplinClient } = require('../src/joplin-client');
+		try {
+			return await fn(new JoplinClient(server.address().port, 'a-token'));
+		} finally {
+			server.close();
+		}
+	}
+
+	await check('a rejected token reports false', async () => {
+		// Joplin answers 403 with `Invalid "token" parameter`.
+		const v = await withStatus(403, '{"error":"Invalid token"}', (c) => c.tokenIsValid());
+		assert.strictEqual(v, false);
+	});
+
+	await check('a working token reports true', async () => {
+		const v = await withStatus(200, '{"items":[]}', (c) => c.tokenIsValid());
+		assert.strictEqual(v, true);
+	});
+
+	await check('an unreachable Joplin reports unknown, not invalid', async () => {
+		// This is the bug: a bare catch returned false for any failure, so a
+		// busy or restarting Joplin looked exactly like a revoked token and
+		// raised its authorisation prompt for a token that was fine.
+		const { JoplinClient } = require('../src/joplin-client');
+		const v = await new JoplinClient(59999, 'a-token').tokenIsValid();
+		assert.strictEqual(v, null, 'a refused connection must not read as invalid');
+	});
+
+	await check('a server error reports unknown, not invalid', async () => {
+		const v = await withStatus(500, 'boom', (c) => c.tokenIsValid());
+		assert.strictEqual(v, null);
+	});
+
+	await check('no token at all is invalid, not unknown', async () => {
+		const { JoplinClient } = require('../src/joplin-client');
+		assert.strictEqual(await new JoplinClient(41184, null).tokenIsValid(), false);
+	});
+
 	let failed = 0;
 	for (const r of results) {
 		if (r.ok) {
