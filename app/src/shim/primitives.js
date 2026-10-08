@@ -197,6 +197,17 @@ class KonObject {
 		this.node.title = this._tooltip;
 	}
 
+	// Not a Konfabulator property. The 2008 engine gave the whole widget one
+	// arrow cursor and offered no way to change it, so the original has
+	// nothing to port here — but the ported widget has clickable text that
+	// looks exactly like the labels beside it, and in a browser-shaped
+	// runtime a pointer cursor is what tells them apart.
+	get cursor() { return this._cursor || ''; }
+	set cursor(v) {
+		this._cursor = v == null ? '' : String(v);
+		this.node.style.cursor = this._cursor;
+	}
+
 	get name() { return this._name; }
 	set name(v) { this._name = v; }
 
