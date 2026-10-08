@@ -201,14 +201,18 @@ function safeTitle(name) {
 	return cleaned || 'Untitled project';
 }
 
-async function sync(client, databasePath, { onProgress } = {}) {
+async function sync(client, databasePath, { onProgress, folderId, onFolder } = {}) {
 	const report = (message) => { if (onProgress) onProgress(message); };
 
 	report('Reading the TimeVault database…');
 	const { projects, events } = readData(databasePath);
 
 	report('Finding the Time Vault notebook…');
-	const root = await client.ensureFolder(ROOT_FOLDER);
+	// By id first: that survives the notebook being renamed or moved, and
+	// can't be confused with another notebook of the same name. Falls back
+	// to the title, then to creating one.
+	const root = await client.ensureFolderById(folderId, ROOT_FOLDER);
+	if (onFolder) onFolder(root.id);
 
 	report('Writing the summary…');
 	await client.upsertNote('Summary', buildSummaryNote(projects, events), root.id);

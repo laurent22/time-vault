@@ -247,7 +247,19 @@ class JoplinClient {
 		return items;
 	}
 
+	// Joplin's trash keeps an item reachable, with deleted_time set to when
+	// it was binned. Writing into one would put the notes somewhere the user
+	// has already thrown away.
+	//
+	// The list endpoints filter these out themselves — folders.ts appends
+	// `deleted_time = 0` unless include_deleted=1 — but fetching a single
+	// folder by id does not, so that one has to be checked here.
+	static isDeleted(item) {
+		return !!(item && item.deleted_time);
+	}
+
 	async findFolder(title, parentId = '') {
+		// Trashed folders are already excluded by the API.
 		const folders = await this.getAll('/folders', { fields: 'id,title,parent_id' });
 		return folders.find((f) => f.title === title && (f.parent_id || '') === parentId) || null;
 	}
@@ -258,7 +270,32 @@ class JoplinClient {
 		return this.post('/folders', { title, parent_id: parentId });
 	}
 
+	// Returns the folder with this id, or falls back to finding one by title,
+	// or creates it.
+	//
+	// Looking up by title alone meant renaming the notebook in Joplin — or
+	// any lookup that came back empty — produced a second one. The id is
+	// remembered between runs so the sync keeps writing to the notebook it
+	// created, whatever it is now called.
+	async ensureFolderById(id, title, parentId = '') {
+		if (id) {
+			try {
+				const folder = await this.get(`/folders/${id}`, { fields: 'id,title,deleted_time' });
+				// A trashed folder still answers 200, so the id alone isn't
+				// enough — without this the sync would keep writing into the
+				// bin, and the notes would look lost.
+				if (folder && folder.id && !JoplinClient.isDeleted(folder)) return folder;
+			} catch {
+				// Permanently deleted, or belongs to a different profile:
+				// fall through and find or create one by title.
+			}
+		}
+		return this.ensureFolder(title, parentId);
+	}
+
 	async findNote(title, parentId) {
+		// Trashed notes are already excluded by the API, so a note the user
+		// has binned is recreated rather than silently updated in place.
 		const notes = await this.getAll(`/folders/${parentId}/notes`, { fields: 'id,title' });
 		return notes.find((n) => n.title === title) || null;
 	}

@@ -25,21 +25,43 @@ const TOKEN_FILE = () => path.join(app.getPath('userData'), 'joplin-token.json')
 function loadToken() {
 	try {
 		const data = JSON.parse(fs.readFileSync(TOKEN_FILE(), 'utf8'));
-		return { token: data.token || null, port: data.port || null };
+		return {
+			token: data.token || null,
+			port: data.port || null,
+			folderId: data.folderId || null,
+		};
 	} catch {
-		return { token: null, port: null };
+		return { token: null, port: null, folderId: null };
+	}
+}
+
+// Merges rather than overwrites: the token and the notebook id are written
+// by different code paths, and a plain rewrite would drop whichever wasn't
+// being set at the time.
+function saveTokenData(patch) {
+	try {
+		const next = { ...loadToken(), ...patch };
+		fs.mkdirSync(path.dirname(TOKEN_FILE()), { recursive: true });
+		fs.writeFileSync(TOKEN_FILE(), JSON.stringify(next, null, '\t'), 'utf8');
+		// The token grants full access to the user's notes.
+		fs.chmodSync(TOKEN_FILE(), 0o600);
+	} catch (e) {
+		console.error('[joplin] could not save the token file:', e.message);
 	}
 }
 
 function saveToken(token, port) {
-	try {
-		fs.mkdirSync(path.dirname(TOKEN_FILE()), { recursive: true });
-		fs.writeFileSync(TOKEN_FILE(), JSON.stringify({ token, port }, null, '\t'), 'utf8');
-		// The token grants full access to the user's notes.
-		fs.chmodSync(TOKEN_FILE(), 0o600);
-	} catch (e) {
-		console.error('[joplin] could not save the token:', e.message);
-	}
+	saveTokenData({ token, port });
+}
+
+// The notebook the sync owns, remembered by id so it survives a rename and
+// can't be confused with another notebook of the same name.
+function loadFolderId() {
+	return loadToken().folderId;
+}
+
+function saveFolderId(folderId) {
+	saveTokenData({ folderId });
 }
 
 function forgetToken() {
@@ -170,14 +192,33 @@ function databasePath() {
 // only triggers are automatic it meant none of them could ever authorise, and
 // the feature was impossible to start. Joplin closed, or authorisation not
 // yet granted, are ordinary states that fix themselves on a later attempt.
+// Only one sync at a time.
+//
+// Three triggers can overlap — a change, the startup sync, and the one on
+// quit — and each used to look for the notebook, find nothing, and create
+// one. That is how duplicate "Time Vault" notebooks appeared. A concurrent
+// caller now joins the run already in progress rather than starting another.
+let syncInFlight = null;
+
 async function runSync(parentWindow) {
-	const client = await connect(parentWindow);
-	if (!client) return null;
+	if (syncInFlight) return syncInFlight;
 
-	const dbPath = databasePath();
-	if (!fs.existsSync(dbPath)) return null;
+	syncInFlight = (async () => {
+		const client = await connect(parentWindow);
+		if (!client) return null;
 
-	return joplinSync.sync(client, dbPath);
+		const dbPath = databasePath();
+		if (!fs.existsSync(dbPath)) return null;
+
+		return joplinSync.sync(client, dbPath, {
+			// Remembered across runs, so the notebook is found by id even if
+			// it has been renamed or moved in Joplin.
+			folderId: loadFolderId(),
+			onFolder: (id) => { if (id !== loadFolderId()) saveFolderId(id); },
+		});
+	})().finally(() => { syncInFlight = null; });
+
+	return syncInFlight;
 }
 
 function register() {

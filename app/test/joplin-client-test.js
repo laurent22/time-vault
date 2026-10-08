@@ -199,6 +199,93 @@ async function check(name, fn) {
 		assert.strictEqual(await new JoplinClient(41184, null).tokenIsValid(), false);
 	});
 
+	// --- the notebook is found by id, not just by title --------------------
+
+	// A stub Joplin that tracks what gets created.
+	async function withFolders(folders, fn) {
+		const http = require('node:http');
+		const created = [];
+		const server = http.createServer((req, res) => {
+			const url = new URL(req.url, 'http://x');
+			res.setHeader('Content-Type', 'application/json');
+
+			const byId = url.pathname.match(/^\/folders\/(.+)$/);
+			if (byId && req.method === 'GET') {
+				const f = folders.find((x) => x.id === byId[1]);
+				if (!f) { res.writeHead(404); res.end('{"error":"not found"}'); return; }
+				res.writeHead(200); res.end(JSON.stringify(f)); return;
+			}
+
+			if (url.pathname === '/folders' && req.method === 'POST') {
+				let body = '';
+				req.on('data', (d) => { body += d; });
+				req.on('end', () => {
+					const f = { id: `new-${created.length}`, ...JSON.parse(body) };
+					created.push(f); folders.push(f);
+					res.writeHead(200); res.end(JSON.stringify(f));
+				});
+				return;
+			}
+
+			// Faithful to Joplin: list endpoints append `deleted_time = 0`
+			// unless include_deleted=1, so trashed folders never appear.
+			// Only the by-id lookup above returns them.
+			const visible = url.searchParams.get('include_deleted') === '1'
+				? folders
+				: folders.filter((f) => !f.deleted_time);
+			res.writeHead(200);
+			res.end(JSON.stringify({ items: visible, has_more: false }));
+		});
+		await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+		const { JoplinClient } = require('../src/joplin-client');
+		try {
+			return await fn(new JoplinClient(server.address().port, 'tok'), created);
+		} finally {
+			server.close();
+		}
+	}
+
+	await check('a known notebook id is used as-is', async () => {
+		// Renaming the notebook in Joplin must not produce a second one.
+		await withFolders([{ id: 'keep', title: 'My Renamed Vault', parent_id: '' }],
+			async (client, created) => {
+				const f = await client.ensureFolderById('keep', 'Time Vault');
+				assert.strictEqual(f.id, 'keep', 'should have reused the known notebook');
+				assert.strictEqual(created.length, 0, 'should not have created one');
+			});
+	});
+
+	await check('a stale notebook id falls back to the title', async () => {
+		await withFolders([{ id: 'existing', title: 'Time Vault', parent_id: '' }],
+			async (client, created) => {
+				const f = await client.ensureFolderById('deleted-long-ago', 'Time Vault');
+				assert.strictEqual(f.id, 'existing');
+				assert.strictEqual(created.length, 0, 'should not have created one');
+			});
+	});
+
+	await check('a notebook in the trash is not reused', async () => {
+		// Joplin's trash keeps an item reachable: GET /folders/:id answers
+		// 200 for a binned folder, with deleted_time set. Without checking
+		// it the sync would keep writing into the bin and the notes would
+		// look lost. The list endpoints filter trashed items themselves —
+		// see folders.ts — so only the by-id lookup needs this.
+		await withFolders([{ id: 'binned', title: 'Time Vault', parent_id: '', deleted_time: 1791457218039 }],
+			async (client, created) => {
+				const f = await client.ensureFolderById('binned', 'Time Vault');
+				assert.notStrictEqual(f.id, 'binned', 'reused a notebook from the trash');
+				assert.strictEqual(created.length, 1, 'should have created a fresh one');
+			});
+	});
+
+	await check('a notebook is created only when there is none', async () => {
+		await withFolders([], async (client, created) => {
+			const f = await client.ensureFolderById(null, 'Time Vault');
+			assert.strictEqual(created.length, 1);
+			assert.strictEqual(f.title, 'Time Vault');
+		});
+	});
+
 	let failed = 0;
 	for (const r of results) {
 		if (r.ok) {
