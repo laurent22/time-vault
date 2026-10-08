@@ -691,18 +691,25 @@ class Text extends KonObject {
 		//
 		// Making the element a flex container centres the line box on the
 		// element's own height, which puts the ink where the caller's
-		// arithmetic expects it. Measured from rendered pixels: 20px above
-		// and 23px below at 3x before, balanced after.
-		this.node.style.lineHeight = '1';
+		// arithmetic expects it.
+		//
+		// The line height must be the font's own, not `1`. A line box exactly
+		// one em tall cannot hold ascender and descender both, so the ink
+		// overflows the element's box — a descender hung 1px below it at 11px
+		// — and every caller that derives geometry from the box then cuts it
+		// off: MainDrawer advances its row cursor by each label's height, so
+		// the tail of a "p" or "g" landed in the next row and was clipped.
+		//
+		// This also replaces a `paddingTop: 0.11em` nudge that used to sit
+		// here. That was compensating for an imbalance `line-height: 1`
+		// created in the first place: with the font's own line height the ink
+		// is already centred on the box to the pixel, at every size the widget
+		// uses. Measured 11/12/22px: ink centred within 0.00px and nothing
+		// below the box, against 0.35–0.96px low and up to 1.5px overhanging
+		// before.
+		this.node.style.lineHeight = 'normal';
 		this.node.style.display = 'flex';
 		this.node.style.alignItems = 'center';
-		// A line box reserves descender space whether the text uses it or
-		// not, so the visible glyphs sit above the box's middle and a label
-		// centred by its box still reads as high. Nudging down by the unused
-		// descender puts the ink where the eye expects it. Measured from
-		// rendered pixels rather than box geometry, which reports this as
-		// already centred.
-		this.node.style.paddingTop = 'calc(0.11em)';
 
 		// Writing to text.style.fontSize etc. should hit the DOM directly.
 		this.style = this.node.style;
@@ -765,10 +772,10 @@ class Text extends KonObject {
 	// of the buttons below it.
 	get height() {
 		const rect = this.node.getBoundingClientRect();
-		// An empty flex box still has the padding that centres the glyphs,
-		// so a few stray pixels aren't a real line — fall through to the
-		// line-height measurement below, which is what MainDrawer's empty
-		// Description column needs.
+		// An empty string collapses the flex box, and a detached element
+		// reports zero — neither is a real line, so anything this small falls
+		// through to the line-height measurement below, which is what
+		// MainDrawer's empty Description column needs.
 		const unscaled = rect.height / stageScale();
 		if (unscaled > 4) return Math.ceil(unscaled);
 
