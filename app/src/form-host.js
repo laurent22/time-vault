@@ -100,8 +100,15 @@ function buildHtml(items, title, okLabel, cancelLabel) {
 		});
 		document.getElementById('cancel').addEventListener('click', () => send(null));
 		document.addEventListener('keydown', (e) => { if (e.key === 'Escape') send(null); });
-		const first = document.querySelector('input, select');
-		if (first) first.focus();
+		// Focus the first field, and select its text so typing replaces it.
+		// Most of these dialogs open on a placeholder — "New task", "New
+		// project" — which the user almost always means to overwrite, and
+		// focus alone left them deleting it by hand first.
+		const first = document.querySelector('input, select, textarea');
+		if (first) {
+			first.focus();
+			if (typeof first.select === 'function' && first.type !== 'checkbox') first.select();
+		}
 	<\/script>
 </body></html>`;
 }

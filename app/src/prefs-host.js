@@ -131,6 +131,13 @@ function buildHtml(groups, title) {
 		});
 		document.getElementById('cancel').addEventListener('click', () => ipcRenderer.send('prefs:done', null));
 		document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ipcRenderer.send('prefs:done', null); });
+
+		// Focus the first field of the visible tab, so the keyboard works
+		// without clicking first. Not selected, unlike the form dialog:
+		// these are existing settings rather than placeholders, and
+		// selecting one invites overwriting a value by accident.
+		const firstPref = document.querySelector('.panel.active input, .panel.active select');
+		if (firstPref) firstPref.focus();
 	<\/script>
 </body></html>`;
 }
