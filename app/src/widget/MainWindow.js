@@ -126,6 +126,10 @@ function MainWindow() {
 	this.projectNameText.style.fontSize = "12px";
 	this.projectNameText.style.color = "#ffffff";
 	this.projectNameText.tooltip = loc("mainWindow_projectTooltip");
+	// Both these labels open a menu but look like the static text around
+	// them. The underline only shows while the mouse is over the widget, so
+	// the cursor is what identifies them as you actually reach for one.
+	this.projectNameText.cursor = "pointer";
 	
 	this.projectOptionText = new Text();
 	this.projectOptionText.anchorStyle = "topLeft";
@@ -134,10 +138,17 @@ function MainWindow() {
 	this.projectOptionText.style.fontSize = "12px";
 	this.projectOptionText.style.color = "#ffffff";
 	this.projectOptionText.tooltip = loc("mainWindow_projectOptionTooltip");
+	this.projectOptionText.cursor = "pointer";
 		
 	this.projectNameTextUnderline = new Image();
 	this.projectNameTextUnderline.src = "Resources/White.png";
-	
+
+	// The task label opens a menu just as the project name does, so it gets
+	// the same underline — without one it read as a plain caption and nobody
+	// would think to click it.
+	this.projectOptionTextUnderline = new Image();
+	this.projectOptionTextUnderline.src = "Resources/White.png";
+
 	includeFile("RoundButton.js");
 	
 	this.expandButton = new RoundButton(Main.skinFolder + "/RoundButtonDownArrowIcon.png");//new FlashingButton(Main.skinFolder + "/ExpandButtonUp.png");
@@ -228,7 +239,8 @@ function MainWindow() {
 //	this.eventFrame.appendChild(this.taskNameLabel);
 //	this.eventFrame.appendChild(this.taskNameTextArea);
 	this.eventFrame.appendChild(this.projectNameTextUnderline);
-	
+	this.eventFrame.appendChild(this.projectOptionTextUnderline);
+
 	this.rightFrame.appendChild(this.rightBackground.frame);
 	this.rightFrame.appendChild(this.infoAreaCanvas);
 	this.rightFrame.appendChild(this.infoAreaActiveCanvas);
@@ -412,8 +424,10 @@ function MainWindow() {
 		it.owner = this;
 		it.checked = this.owner.projectEvent.description == 0;
 		it.onSelect = function() {			
-			this.owner.owner.projectEvent.description = 0;	
+			this.owner.owner.projectEvent.description = 0;
 			preferences.lastSelectedTaskID.value = 0;
+			// The capsule shows the task now, so clearing it has to repaint.
+			this.owner.owner.updateProjectEventDisplay();
 		}
 		items.push(it);
 			
@@ -432,9 +446,12 @@ function MainWindow() {
 			it.onSelect = function() {
 				
 				this.owner.owner.projectEvent.description = this.__task.id;
-				//this.owner.owner.updateProjectEventDisplay();
+				// The capsule shows the task now, so picking one has to
+				// repaint it — this was dead code while it showed the
+				// project, whose name never changed here.
+				this.owner.owner.updateProjectEventDisplay();
 
-				preferences.lastSelectedTaskID.value = this.__task.id;				
+				preferences.lastSelectedTaskID.value = this.__task.id;
 			}
 			
 			items.push(it);
@@ -670,6 +687,7 @@ MainWindow.prototype.showButtons = function(iShow, iAnimate) {
 		this.resizeButton.opacity = 0;
 		this.buttonShown = iShow;
 		this.projectNameTextUnderline.opacity = 0;
+		this.projectOptionTextUnderline.opacity = 0;
 		return;
 	}
 		
@@ -679,7 +697,14 @@ MainWindow.prototype.showButtons = function(iShow, iAnimate) {
 	if (this.projectNameTextUnderline.__fadeAnimation == undefined) {
 		this.projectNameTextUnderline.__fadeAnimation = new Puppeteer.Animation();
 		this.projectNameTextUnderline.__fadeAnimation.duration = 500;
-		this.projectNameTextUnderline.__fadeAnimation.onUpdate = [this.projectNameTextUnderline, "opacity"];
+		// One animation drives both underlines, so they can't drift apart.
+		// A function rather than the [object, "property"] form the original
+		// used, which can only reach a single target.
+		var thisObject = this;
+		this.projectNameTextUnderline.__fadeAnimation.onUpdate = function(iValue) {
+			thisObject.projectNameTextUnderline.opacity = iValue;
+			thisObject.projectOptionTextUnderline.opacity = iValue;
+		}
 	}
 	
 	this.projectNameTextUnderline.__fadeAnimation.startValue = this.projectNameTextUnderline.opacity;
@@ -712,7 +737,8 @@ MainWindow.prototype.buttonFadeAnimation_update = function(iValue) {
 	this.expandButton.opacity = iValue;
 	this.resizeButton.opacity = iValue;
 		
-	this.projectNameTextUnderline.opacity = iValue / 2;	
+	this.projectNameTextUnderline.opacity = iValue / 2;
+	this.projectOptionTextUnderline.opacity = iValue / 2;
 	
 //	if (iValue == 255 && this.buttonShown) {
 //		print("ici");
@@ -918,6 +944,18 @@ MainWindow.prototype.updateProjectEventDisplay = function() {
 		}
 		
 		this.projectNameText.data = this.projectEvent.project.name;
+
+		// The task goes in the [+] label beside the name rather than being
+		// appended to it: that control's menu is what picks the task, so the
+		// current one belongs on it, and keeping them separate lets the
+		// project name truncate and underline on its own as before.
+		//
+		// Set lighter and non-bold so the pair reads as "project, then what
+		// I'm doing on it" rather than as one long run of text. With no task
+		// selected it stays as [+], which is the affordance for choosing one.
+		var task = this.projectEvent.descriptionString;
+		this.projectOptionText.data = task != "" ? task : "[+]";
+		this.projectOptionText.style.fontWeight = task != "" ? "normal" : "bold";
 	}
 	
 	this.update();
@@ -1383,25 +1421,64 @@ MainWindow.prototype.update = function() {
 	}
 
 	
-	var maxWidth = this.infoAreaCanvas.width - 35 - this.projectOptionText.width;//- this.projectNameLabel.width;
-	
+	// The two labels share one line, so the space has to be divided rather
+	// than given to whichever is measured first. This used to subtract the
+	// option label's width outright, which was safe while it was always the
+	// 20px "[+]" — now that it can hold a task name, a long one starved the
+	// project name down to a bare ellipsis.
+	//
+	// The project name gets first claim, capped at half the line so it can't
+	// starve the task either, and the task takes whatever is left.
+	this.projectOptionText.width = null;
+	this.projectOptionText.truncation = null;
+
+	var available = this.infoAreaCanvas.width - 35;
+	var gap = 4;
+
 	this.projectNameText.width = null;
 	this.projectNameText.truncation = null;
-	
-	if (this.projectNameText.width > maxWidth) {
-		this.projectNameText.width = maxWidth;
-		this.projectNameText.truncation = "end";
+
+	var nameWidth = this.projectNameText.width;
+	var taskWidth = this.projectOptionText.width;
+
+	if (nameWidth + gap + taskWidth > available) {
+		var nameBudget = Math.max(Math.floor((available - gap) / 2), available - gap - taskWidth);
+		if (nameWidth > nameBudget) {
+			nameWidth = nameBudget;
+			this.projectNameText.width = nameWidth;
+			this.projectNameText.truncation = "end";
+		}
+
+		var taskBudget = available - gap - nameWidth;
+		if (taskWidth > taskBudget) {
+			this.projectOptionText.width = Math.max(taskBudget, 0);
+			this.projectOptionText.truncation = "end";
+		}
 	}
-	
-	this.projectOptionText.hOffset = this.projectNameText.hOffset + this.projectNameText.width + 4;
+
+	this.projectOptionText.hOffset = this.projectNameText.hOffset + this.projectNameText.width + gap;
 	
 	
 	this.projectNameTextUnderline.hOffset = this.projectNameText.hOffset;
 	this.projectNameTextUnderline.vOffset = this.projectNameText.vOffset + this.projectNameText.height;
 	this.projectNameTextUnderline.width = this.projectNameText.width;
+
+	// Underlined only when it names a task. The bare [+] is already read as
+	// a button — underlining the brackets just looks like a mistake.
+	this.projectOptionTextUnderline.hOffset = this.projectOptionText.hOffset;
+	this.projectOptionTextUnderline.vOffset = this.projectOptionText.vOffset + this.projectOptionText.height;
+	this.projectOptionTextUnderline.visible = this.projectOptionText.data != "[+]";
+	this.projectOptionTextUnderline.width = this.projectOptionText.width;
+
 	
-	
-	this.projectOptionText.opacity = this.projectEvent == null ? 100 : 255;
+	// Dimmed when it names the current task, so it reads as secondary to the
+	// project name; full strength as the bare [+] affordance, which needs to
+	// be noticeable enough to invite a click.
+	if (this.projectEvent == null) {
+		this.projectOptionText.opacity = 100;
+	} else {
+		this.projectOptionText.opacity = this.projectOptionText.data == "[+]" ? 255 : 190;
+	}
 	
 
 	this.updateResizeButtonLocation();
