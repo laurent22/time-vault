@@ -143,6 +143,26 @@ still hit-tests; and window fitting must measure in the stage's own coordinate
 space, or the offset that uncovers content above the origin cancels itself out
 and oscillates forever.
 
+**Zoom means event coordinates are not screen coordinates.** The stage is
+scaled with a CSS transform, so a mouse delta in screen pixels is *larger*
+than the same distance in the unscaled coordinates the ported layout works in.
+Konfabulator had no zoom, so the widget adds `system.event.screenX` deltas
+straight onto a width — at 1.5x the window grew half again as fast as the
+mouse moved, and three times as fast at 3x. `shim/filesystem.js` divides
+`screenX`/`screenY` by `konStageScale()` so every consumer gets stage
+coordinates, and rounds, because those deltas become canvas dimensions and a
+fractional width leaves the 3-piece backgrounds on half-pixel seams. The same
+division is why `Text.width` and `Text.height` divide in `primitives.js`.
+
+**The widget's own geometry is saved in `onUnload`, which nothing calls.** The
+original wrote window width, drawer size and position there; the port has no
+such hook, so a resize was lost on every restart. `MainWindow.saveGeometry()`
+is called from the two resize drag handlers instead. Saving only at quit would
+be wrong anyway — a crash or force-quit loses it. Preference writes are
+debounced 250ms and flushed on unload, so calling it per gesture is cheap.
+Window *position* was never affected: `shim/interaction.js` already writes it
+during the drag.
+
 **Dragging must sample alpha too, not just click-through.** The OS window is a
 rectangle fitted to the widget's bounding box, so it covers the transparent
 regions the rounded corners and the gap beside the capsule leave behind — and

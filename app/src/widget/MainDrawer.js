@@ -687,11 +687,14 @@ MainDrawer.prototype.resizeAnchor_mouseDrag = function() {
 	
 	if (this.frame.width != w || this.frame.height != h) {
 		this.frame.width = w;
-		this.frame.height = h;		
+		this.frame.height = h;
 		this.update();
 		this.onResized(this, {});
+		// Persisted as it changes rather than at quit, which the port never
+		// reached — see MainWindow.saveGeometry.
+		if (gMainWindow && gMainWindow.saveGeometry) gMainWindow.saveGeometry();
 	}
-		
+
 }
 
 

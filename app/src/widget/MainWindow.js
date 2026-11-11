@@ -1325,9 +1325,31 @@ MainWindow.prototype.resizeButton_mouseDrag = function() {
 		
 	if (this.rightBackground.width != w) {
 		this.rightBackground.width = w;
-		this.update();		
+		this.update();
 		this.onResized(this, {});
+		this.saveGeometry();
 	}
+}
+
+
+// The window's size and position, written as they change.
+//
+// The original did this only in onUnload, which the port never calls — so a
+// resize was lost on every restart — and even where it is called, saving
+// exclusively at quit loses the lot to a crash or a force-quit. Preference
+// writes are debounced 250ms and flushed on unload, so calling this freely
+// costs one write per gesture rather than one per pixel.
+MainWindow.prototype.saveGeometry = function() {
+	// The collapsed width, not the live one: with the drawer open
+	// rightBackground is as wide as the drawer, and saving that would make
+	// the widget reopen at drawer width with no drawer.
+	if (!this.drawerOpened) this.lastRightBackgroundWidth = this.rightBackground.width;
+	else this.lastDrawerWidth = this.drawer.frame.width;
+
+	preferences.lastRightPartWidth.value = this.lastRightBackgroundWidth;
+	preferences.lastDrawerWidth.value = this.lastDrawerWidth;
+	preferences.lastDrawerHeight.value = this.drawer.frame.height;
+	preferences.windowLocation.value = this.win.hOffset + "," + this.win.vOffset;
 }
 
 
