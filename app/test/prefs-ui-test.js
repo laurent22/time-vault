@@ -148,3 +148,44 @@ puCheck('text measurements are independent of zoom', () => {
 		return `inconsistent: ${at1} at 1x vs ${at2} at 2x`;
 	}
 });
+
+puCheck('a resize drag tracks the mouse at every zoom level', () => {
+	// The widget adds a raw screen delta straight onto its width, which is
+	// in unscaled stage coordinates. Konfabulator had no zoom so the two
+	// always agreed; here the window grew by the zoom factor more than the
+	// mouse moved — half again as fast at 1.5x, three times at 3x. The shim
+	// reports event coordinates in stage space so the arithmetic holds.
+	if (typeof konSetZoom !== 'function') return 'konSetZoom is not exposed';
+	if (typeof gMainWindow === 'undefined') return 'no main window';
+
+	const node = gMainWindow.resizeButton.frame.node;
+	const before = konZoom();
+	const problems = [];
+
+	for (const zoom of [1, 1.5, 3]) {
+		konSetZoom(zoom);
+		const start = gMainWindow.rightBackground.width;
+
+		// 100 screen pixels to the right, which should widen the rendered
+		// widget by 100 screen pixels whatever the zoom.
+		const at = (x) => ({ bubbles: true, clientX: x, clientY: 200, screenX: x, screenY: 200 });
+		node.dispatchEvent(new MouseEvent('mousedown', at(300)));
+		node.dispatchEvent(new MouseEvent('mousemove', at(400)));
+		node.dispatchEvent(new MouseEvent('mouseup', at(400)));
+
+		const grewOnScreen = (gMainWindow.rightBackground.width - start) * zoom;
+
+		gMainWindow.rightBackground.width = start;
+		gMainWindow.update();
+
+		// Generous: the width is clamped to a min and max, so a run that
+		// hits a limit grows less — but it must never grow *more* than the
+		// mouse moved, which is the bug.
+		if (grewOnScreen > 105) {
+			problems.push(`${zoom}x grew ${Math.round(grewOnScreen)}px for a 100px drag`);
+		}
+	}
+
+	konSetZoom(before);
+	if (problems.length) return problems.join('; ');
+});

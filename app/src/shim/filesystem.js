@@ -109,6 +109,17 @@
 		ev.ctrlKey = !!e.ctrlKey;
 		ev.metaKey = !!e.metaKey;
 		if (e.clientX !== undefined) {
+			// Reported in the coordinates the ported layout works in, not
+			// the screen's. Konfabulator had no zoom, so the two were always
+			// the same and the widget adds a raw screen delta straight onto
+			// a width — at 1.5x that made the window grow half again as fast
+			// as the mouse moved, and worse the further you zoomed in.
+			//
+			// Defined lazily: primitives.js installs konStageScale and loads
+			// after this file, but no event can arrive before both are in.
+			const scale = typeof globalThis.konStageScale === 'function'
+				? globalThis.konStageScale() : 1;
+
 			ev.x = e.clientX;
 			ev.y = e.clientY;
 			// MainWindow's resize handler measures drag distance in screen
@@ -116,9 +127,12 @@
 			// would make every delta zero, so fall back to client
 			// coordinates — the difference between two samples is the same
 			// either way as long as the window itself hasn't moved.
+			// Rounded: these are drag distances that end up as canvas and
+			// window dimensions, and a fractional width leaves the 3-piece
+			// backgrounds compositing on half-pixel seams.
 			const hasScreen = e.screenX !== 0 || e.screenY !== 0;
-			ev.screenX = hasScreen ? e.screenX : e.clientX;
-			ev.screenY = hasScreen ? e.screenY : e.clientY;
+			ev.screenX = Math.round((hasScreen ? e.screenX : e.clientX) / scale);
+			ev.screenY = Math.round((hasScreen ? e.screenY : e.clientY) / scale);
 		}
 	}
 

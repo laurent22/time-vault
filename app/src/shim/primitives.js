@@ -854,6 +854,11 @@ function stageScale() {
 	return Number.isFinite(v) && v > 0 ? v : 1;
 }
 
+// Shared with the rest of the shim: anything that takes a measurement from
+// the live DOM, or a coordinate from a real mouse event, has to divide by
+// this to get back to the coordinates the ported layout works in.
+globalThis.konStageScale = stageScale;
+
 // --- text measurement -----------------------------------------------------
 // Konfabulator reported text metrics whether or not the element was on
 // screen; the DOM reports zero for anything detached. The ported layout runs
