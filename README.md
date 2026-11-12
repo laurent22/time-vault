@@ -6,10 +6,6 @@ A desktop time tracker: click play when you start a task, click it again when yo
 
 This is an Electron port of **[Time Vault](https://web.archive.org/web/20111117181924/http://widgets.yahoo.com/widgets/time-vault/csort/new/cpage/1)**, a Yahoo! Widget originally released in 2007. The widget engine it was written for was discontinued in 2012, taking the widget with it. The port runs the original code — skin, animations and all — on a modern runtime.
 
-## Demo
-
-https://github.com/user-attachments/assets/0bc5a8cf-3bf3-4ba5-a054-e9fd1ee29560
-
 ## What it does
 
 From the original description:
@@ -35,6 +31,10 @@ Projects carry a time budget, notes and a rate per hour, and can be archived onc
 | **Move it** | drag any part of the skin |
 | **Resize it** | drag the round button on the right |
 | **Zoom** | `Cmd-+` / `Cmd--` / `Cmd-0`, or right-click the widget |
+
+Most of that in half a minute:
+
+https://github.com/user-attachments/assets/0bc5a8cf-3bf3-4ba5-a054-e9fd1ee29560
 
 Your data lives in a `TimeVault` folder — `~/Library/Application Support` on macOS, `%APPDATA%` on Windows, `~/.config` on Linux. `Events.db3` is a plain SQLite file, and CSV reports are written beside it. Databases from the original widget open unchanged.
 
