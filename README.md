@@ -6,6 +6,18 @@ A desktop time tracker: click play when you start a task, click it again when yo
 
 This is an Electron port of **[Time Vault](https://web.archive.org/web/20111117181924/http://widgets.yahoo.com/widgets/time-vault/csort/new/cpage/1)**, a Yahoo! Widget originally released in 2007. The widget engine it was written for was discontinued in 2012, taking the widget with it. The port runs the original code — skin, animations and all — on a modern runtime.
 
+## Getting it
+
+⬇️ **[Download the latest release](https://github.com/laurent22/time-vault/releases/latest)**
+
+| | |
+|---|---|
+| **macOS** | `Time-Vault-<version>-arm64.dmg` for Apple silicon, `Time-Vault-<version>.dmg` for Intel |
+| **Windows** | `Time-Vault-Setup-<version>.exe` to install, or `Time-Vault-<version>.exe` to run as-is |
+| **Linux** | `Time-Vault-<version>.AppImage`, or `timevault_<version>_amd64.deb` |
+
+The macOS and Windows builds are signed and notarised, so they open without a security warning.
+
 ## What it does
 
 From the original description:
