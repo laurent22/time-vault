@@ -2,11 +2,9 @@
 
 A desktop time tracker: click play when you start a task, click it again when you finish.
 
-![The widget, open](docs/screenshot.png)
+https://github.com/user-attachments/assets/0bc5a8cf-3bf3-4ba5-a054-e9fd1ee29560
 
 This is an Electron port of **[Time Vault](https://web.archive.org/web/20111117181924/http://widgets.yahoo.com/widgets/time-vault/csort/new/cpage/1)**, a Yahoo! Widget originally released in 2007. The widget engine it was written for was discontinued in 2012, taking the widget with it. The port runs the original code — skin, animations and all — on a modern runtime.
-
-<video src="https://github.com/laurent22/time-vault/raw/master/docs/demo.mp4" controls muted playsinline style="max-height: 480px;"></video>
 
 ## What it does
 
